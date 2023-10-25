@@ -6,7 +6,34 @@ from flask import Flask, render_template, jsonify
 from flask_cors import CORS
 from fileinput import filename 
 
-image_list = Load_Data().from_folder(['./main carpet'])
+
+
+
+import pymongo
+
+# Replace these values with your actual MongoDB connection details
+mongo_url = "mongodb://localhost:27017/"  # MongoDB connection URL
+database_name = "tile_project"  # Your database name
+
+# Create a connection to MongoDB
+client = pymongo.MongoClient(mongo_url)
+database = client[database_name]
+
+
+collection_name = "all_carpets"
+collection = database[collection_name]
+# image_directory = './main_carpet'
+
+# image_names = [filename for filename in os.listdir(image_directory) if filename.endswith(('.jpg', '.png', '.jpeg', '.gif', '.bmp'))]
+
+# for image_name in image_names:
+#     database[collection_name].insert_one({"name": image_name})
+
+# client.close()
+
+
+
+image_list = Load_Data().from_folder(['./main_carpet'])
 st = Search_Setup(image_list=image_list, model_name='vgg19', pretrained=True, image_count=100)
 st.run_index()
 
@@ -14,7 +41,51 @@ app = Flask(__name__)
 CORS(app)
 
 
+@app.route('/')
+def index():
+    return render_template('index.html')
+
+@app.route('/carpets')
+def carpets():
+    all_documents = list(collection.find({}).sort("createdAt", -1))
+
+
+    for document in all_documents:
+        document["_id"] = str(document["_id"])
+
+    return jsonify({"carpets":all_documents})
+
+
+
+
+
+@app.route('/main_carpet/<path:filename>')
+def serve_image(filename):
+    print('runiiiiiiiiiiiiiii')
+    return send_from_directory('./main_carpet', filename)
+
+
+
 # Using the below, the popup message appears when the button is clicked on the webpage.
+@app.route('/add_carpet', methods=['POST'])
+def add_carpet():
+        f = request.files['file'] 
+        folder_path = './main_carpet'  # Destination folder
+        file_path = os.path.join(folder_path, f.filename)
+        f.save(file_path)
+        st.add_images_to_index(new_image_paths=[file_path]) 
+        database[collection_name].insert_one({"name": f.filename})
+
+
+        # st.run_index()  
+
+        return jsonify({"success":1})
+
+
+
+
+
+
 @app.route('/test', methods=['POST'])
 def test():
 
@@ -26,15 +97,15 @@ def test():
         # return render_template("Acknowledgement.html", name = f.filename)   
 
     message = 'You have just run a Python script on the button press!'
-    names = st.get_similar_images(image_path=f, number_of_images=10)
+    names = st.get_similar_images(image_path=f, number_of_images=20)
     names_str = {str(key): value for key, value in names.items()}
 
     # st.plot_similar_images(image_path = image_list[90],number_of_images=16)
 
+    return jsonify(names_str)
     
    
     
-    return jsonify(names_str)
 
 if __name__ == "__main__":
     app.run(debug=True)

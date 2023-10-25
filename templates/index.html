@@ -12,7 +12,8 @@
 <! -- This script runs the python script on the page load -->
 <form >   
     <input type="file" name="file" id="fileInput" />   
-    <input type="button" value="Upload"  onclick="uploadFile()">   
+    <input type="button" value="Upload"  onclick="uploadFile()"> 
+      
 </form>  
 <table id="myTable">
     <thead>
@@ -78,11 +79,62 @@
 
 
       let name = pa[pa.length-1]
-      const row = `<tr>
-                    <td>${name}</td>
-                  </tr>`;
+      const row = `\
+                    <tr>\
+                        <td>\
+                        <img class="imgClass" height="10%" width="10%" src ="http://localhost:5000/main_carpet/${name}">\
+                        </td>\
+                        <td>${name}</td>\
+                  </tr>`
       tableBody.innerHTML += row;
     }
+
+                console.log(response);
+            },
+            error: function(xhr, status, error) {
+                // Handle errors here
+                console.error(error);
+            }
+        });
+    }
+</script>
+
+
+<div>
+    <form >   
+        <input type="file" name="file" id="carpet_input" />   
+        <input type="button" value="Upload"  onclick="upload_carpet()">   
+    </form>  
+</div>
+
+<script>
+   
+
+    function upload_carpet() {
+        // Check if a file is selected
+        var fileInput = document.getElementById('carpet_input');
+        if (!fileInput.files.length) {
+            alert("Please select a file before clicking the button.");
+            return;
+        }
+        
+        var formData = new FormData();
+        formData.append('file', fileInput.files[0]);
+        
+        $.ajax({
+            url: "http://localhost:5000/add_carpet",
+            type: "POST",
+            data: formData,
+            contentType: false,
+            processData: false,
+            success: function(response) {
+                const valuesArray = Object.values(response)
+                console.log(valuesArray);
+                // Handle the response from the server here
+                const tableBody = document.querySelector('#myTable tbody');
+                innerHTML = `ddd`
+
+    // Loop through the JSON object and populate the table
 
                 console.log(response);
             },
