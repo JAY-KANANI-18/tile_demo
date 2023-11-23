@@ -121,17 +121,19 @@ def test():
         # return render_template("Acknowledgement.html", name = f.filename)   
 
     message = 'You have just run a Python script on the button press!'
-    names = st.get_similar_images(image_path=f, number_of_images=50)
+    names = st.get_similar_images(image_path=f, number_of_images=10)
     # print(names[1])
     # names = names[0]
     print(names)
     names_str = {str(key): value for key, value in names.items()}
 
+    print(names_str)
+
     # st.plot_similar_images(image_path = image_list[90],number_of_images=16)
 
     return jsonify(names_str)
 
-   
+
     
 
 if __name__ == "__main__":

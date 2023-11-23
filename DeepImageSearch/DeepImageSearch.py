@@ -297,51 +297,38 @@ class Search_Setup:
         self.number_of_images = number_of_images
         query_vector = self._get_query_vector(self.image_path)
         img_dict = self._search_by_vector(query_vector, self.number_of_images)
-
+        print(img_dict.items())
         for img_path, img_vector in img_dict.items():
-            img_vector = self._get_query_vector(img_vector)
-            similarity_percentage = self.calculate_similarity_percentage(query_vector, img_vector)
-            img_dict[img_path] = {'image': img_path, 'similarity_percentage': similarity_percentage}
+            img_vector1 = self._get_query_vector(img_vector)
+            similarity_percentage = self.calculate_similarity_percentage(query_vector, img_vector1)
+            # img_vector = os.path.basename(img_vector)
+
+            img_dict[img_path] = {'image': img_vector, 'similarity_percentage': similarity_percentage}
 
         return img_dict
     
 
     def calculate_similarity_percentage(self, vector1, vector2):
-        try:
-        # Convert strings to numerical arrays
-
-            print(f"Vector 1: {vector1}")
-            print(f"Vector 2: {vector2}")
-            # vector1 = ast.literal_eval(vector1)
-            # vector2 = ast.literal_eval(vector2)
-        except (ValueError, SyntaxError):
-        # Handle the case where the string is not a valid literal
-            return 0.0
 
         vector1 = np.array(vector1)
         vector2 = np.array(vector2)
 
-        print(f"Vector 1: {vector1}")
-        print(f"Vector 2: {vector2}")
+
 
     # Check if vectors have a magnitude of zero
         if np.linalg.norm(vector1) == 0 or np.linalg.norm(vector2) == 0:
-            print("One or both vectors have zero magnitude.")
             return 0.0  # Handle the case where one or both vectors have zero magnitude
 
     # Calculate cosine similarity
         cosine_similarity = np.dot(vector1, vector2) / (np.linalg.norm(vector1) * np.linalg.norm(vector2))
 
-        print(f"Cosine Similarity: {cosine_similarity}")
 
     # Handle the case where the result is not a number
         if np.isnan(cosine_similarity):
-            print("Cosine similarity is not a number.")
             return 0.0  # You can choose to return 0 or handle it differently based on your requirements
 
     # Convert to similarity percentage
         similarity_percentage = (cosine_similarity + 1) / 2 * 100
-        print(f"Similarity Percentage: {similarity_percentage}")
         return similarity_percentage
 
 
