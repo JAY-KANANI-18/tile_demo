@@ -12,6 +12,11 @@ import timm
 from PIL import ImageOps
 import math
 import faiss
+from sklearn.metrics.pairwise import cosine_similarity
+import ast
+
+
+
 
 class Load_Data:
     """A class for loading data from single/multiple folders or a CSV file"""
@@ -248,7 +253,35 @@ class Search_Setup:
         fig.subplots_adjust(top=0.93)
         fig.suptitle('Similar Result Found', fontsize=22)
         plt.show(fig)
+    def get_similar_images(self, image_path: str, number_of_images: int = 10):
+        self.image_path = image_path
+        self.number_of_images = number_of_images
 
+    # Extract features for the query image
+        query_vector = self._get_query_vector(self.image_path)
+
+    # Search for similar images
+        img_dict = self._search_by_vector(query_vector, self.number_of_images)
+
+    # Calculate cosine similarity for each result
+        similarity_percentages = []
+        for img_path in img_dict.values():
+            try:
+            # Extract features for the result image
+                img_vector = self._get_query_vector(img_path)
+
+            # Calculate cosine similarity
+                similarity = cosine_similarity([query_vector], [img_vector])[0][0]
+                similarity_percentages.append(similarity)
+            except Exception as e:
+                print(f"\033[91m Error calculating similarity for image {img_path}: {e}")
+                similarity_percentages.append(None)
+
+        return img_dict, similarity_percentages
+
+
+
+    
     def get_similar_images(self, image_path: str, number_of_images: int = 10):
         """
         Returns the most similar images to a given query image according to the indexed image features.
@@ -264,7 +297,72 @@ class Search_Setup:
         self.number_of_images = number_of_images
         query_vector = self._get_query_vector(self.image_path)
         img_dict = self._search_by_vector(query_vector, self.number_of_images)
+
+        for img_path, img_vector in img_dict.items():
+            img_vector = self._get_query_vector(img_vector)
+            similarity_percentage = self.calculate_similarity_percentage(query_vector, img_vector)
+            img_dict[img_path] = {'image': img_path, 'similarity_percentage': similarity_percentage}
+
         return img_dict
+    
+
+    def calculate_similarity_percentage(self, vector1, vector2):
+        try:
+        # Convert strings to numerical arrays
+
+            print(f"Vector 1: {vector1}")
+            print(f"Vector 2: {vector2}")
+            # vector1 = ast.literal_eval(vector1)
+            # vector2 = ast.literal_eval(vector2)
+        except (ValueError, SyntaxError):
+        # Handle the case where the string is not a valid literal
+            return 0.0
+
+        vector1 = np.array(vector1)
+        vector2 = np.array(vector2)
+
+        print(f"Vector 1: {vector1}")
+        print(f"Vector 2: {vector2}")
+
+    # Check if vectors have a magnitude of zero
+        if np.linalg.norm(vector1) == 0 or np.linalg.norm(vector2) == 0:
+            print("One or both vectors have zero magnitude.")
+            return 0.0  # Handle the case where one or both vectors have zero magnitude
+
+    # Calculate cosine similarity
+        cosine_similarity = np.dot(vector1, vector2) / (np.linalg.norm(vector1) * np.linalg.norm(vector2))
+
+        print(f"Cosine Similarity: {cosine_similarity}")
+
+    # Handle the case where the result is not a number
+        if np.isnan(cosine_similarity):
+            print("Cosine similarity is not a number.")
+            return 0.0  # You can choose to return 0 or handle it differently based on your requirements
+
+    # Convert to similarity percentage
+        similarity_percentage = (cosine_similarity + 1) / 2 * 100
+        print(f"Similarity Percentage: {similarity_percentage}")
+        return similarity_percentage
+
+
+
+
+
+
+
+    # def get_similar_images(self, image_path: str, number_of_images: int = 10):
+    #     self.image_path = image_path
+    #     self.number_of_images = number_of_images
+    #     query_vector = self._get_query_vector(self.image_path)
+    #     img_dict = self._search_by_vector(query_vector, self.number_of_images)
+ 
+    #     similarity_percentages = []
+    #     for img_path in img_dict.values():
+    #         img_vector = self._get_query_vector(img_path)
+    #         similarity = cosine_similarity([query_vector], [img_vector])[0][0]
+    #         similarity_percentages.append(similarity)
+    #     return img_dict, similarity_percentages
+
     def get_image_metadata_file(self):
         """
         Returns the metadata file containing information about the indexed images.
@@ -276,3 +374,125 @@ class Search_Setup:
         """
         self.image_data = pd.read_pickle(config.image_data_with_features_pkl(self.model_name))
         return self.image_data
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# import DeepImageSearch.config as config
+# import os
+# import pandas as pd
+# import matplotlib.pyplot as plt
+# from PIL import Image
+# from tqdm import tqdm
+# import numpy as np
+# from torchvision import transforms
+# import torch
+# from torch.autograd import Variable
+# import timm
+# from PIL import ImageOps
+# import math
+# import faiss
+
+# class Load_Data:
+#     """A class for loading data from single/multiple folders or a CSV file"""
+
+#     def _init_(self):
+#         """
+#         Initializes an instance of LoadData class
+#         """
+#         pass
+#     
+#     def from_folder(self, folder_list: list):
+#         """
+#         Adds images from the specified folders to the image_list.
+
+#         Parameters:
+#         -----------
+#         folder_list : list
+#             A list of paths to the folders containing images to be added to the image_list.
+#         """
+#         self.folder_list = folder_list
+#         image_path = []
+#         for folder in self.folder_list:
+#             for root, dirs, files in os.walk(folder):
+#                 for file in files:
+#                     if file.lower().endswith(('.png', '.jpg', '.jpeg', '.gif', '.bmp')):
+#                         image_path.append(os.path.join(root, file))
+#         return image_path
+
+#     def from_csv(self, csv_file_path: str, images_column_name: str):
+#         """
+#         Adds images from the specified column of a CSV file to the image_list.
+
+#         Parameters:
+#         -----------
+#         csv_file_path : str
+#             The path to the CSV file.
+#         images_column_name : str
+#             The name of the column containing the paths to the images to be added to the image_list.
+#         """
+#         self.csv_file_path = csv_file_path
+#         self.images_column_name = images_column_name
+#         return pd.read_csv(self.csv_file_path)[self.images_column_name].to_list()
+
+# class Search_Setup:
+#   """ A class for setting up and running image similarity search."""
+#   def _init_(self, image_list: list, model_name='vgg19', pretrained=True, image_count: int = None):
+#       """
+#       Parameters:
+#       -----------
+#       image_list : list
+#       A list of images to be indexed and searched.
+#       model_name : str, optional (default='vgg19')
+#       The name of the pre-trained model to use for feature extraction.
+#       pretrained : bool, optional (default=True)
+#       Whether to use the pre-trained weights for the chosen model.
+#       image_count : int, optional (default=None)
+#       The number of images to be indexed and searched. If None, all images in the image_list will be used.
+#       """
+#       self.model_name = model_name
+#       self.pretrained = pretrained
+#       self.image_data = pd.DataFrame()
+#       self.d = None
+#       if image_count==None:
+#           self.image_list = image_list
+#       else:
+#           self.image_list = image_list[:image_count
+#       if f'metadata-files/{self.model_name}' not in os.listdir():
+#           try:
+#               os.makedirs(f'metadata-files/{self.model_name}')
+#           except Exception as e:
+#               pass
+#               #print(f'\033[91m file already exists: metadata-files/{self.model_name}'
+#       # Load the pre-trained model and remove the last layer
+#       print("\033[91m Please Wait Model Is Loading or Downloading From Server!")
+#       base_model = timm.create_model(self.model_name, pretrained=self.pretrained)
+#       self.model = torch.nn.Sequential(*list(base_model.children())[:-1])
+#       self.model.eval()
+#       print(f"\033[92m Model Loaded Successfully: {model_name}"
+#   def _extract(self, img)

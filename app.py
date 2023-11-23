@@ -11,6 +11,23 @@ from firebase_admin import credentials
 cred = credentials.Certificate("./key.json")
 firebase_admin.initialize_app(cred)
 
+from sklearn.metrics.pairwise import cosine_similarity
+
+# class TT:
+
+#  def get_similar_images(self, image_path: str, number_of_images: int = 10):
+#   self.image_path = image_path
+#   self.number_of_images = number_of_images
+#   query_vector = self._get_query_vector(self.image_path)
+#   img_dict = self._search_by_vector(query_vector, self.number_of_images)
+#  # Calculate similarity percentages
+#   similarity_percentages = []
+#   for img_path in img_dict.values():
+#    img_vector = self._get_query_vector(img_path)
+#    similarity = cosine_similarity([query_vector], [img_vector])[0][0]
+#    similarity_percentages.append(similarity)
+#   return img_dict, similarity_percentages
+
 
 
 
@@ -27,6 +44,8 @@ database = client[database_name]
 
 collection_name = "all_carpets"
 collection = database[collection_name]
+
+
 # image_directory = './main_carpet'
 
 # image_names = [filename for filename in os.listdir(image_directory) if filename.endswith(('.jpg', '.png', '.jpeg', '.gif', '.bmp'))]
@@ -102,13 +121,16 @@ def test():
         # return render_template("Acknowledgement.html", name = f.filename)   
 
     message = 'You have just run a Python script on the button press!'
-    names = st.get_similar_images(image_path=f, number_of_images=20)
+    names = st.get_similar_images(image_path=f, number_of_images=50)
+    # print(names[1])
+    # names = names[0]
+    print(names)
     names_str = {str(key): value for key, value in names.items()}
 
     # st.plot_similar_images(image_path = image_list[90],number_of_images=16)
 
     return jsonify(names_str)
-    
+
    
     
 
