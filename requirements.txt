@@ -13,4 +13,4 @@ tqdm
 pymongo
 firebase_admin
 flask_cors
-gunicorn
+uvicorn
