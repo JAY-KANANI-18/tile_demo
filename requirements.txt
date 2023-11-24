@@ -1,0 +1,15 @@
+faiss_cpu
+matplotlib
+numpy
+pandas
+Pillow
+timm
+torch
+torchvision
+tqdm
+flask
+pandas
+tqdm
+pymongo
+firebase_admin
+flask_cors

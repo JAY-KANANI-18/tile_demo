@@ -12,7 +12,7 @@ import timm
 from PIL import ImageOps
 import math
 import faiss
-from sklearn.metrics.pairwise import cosine_similarity
+# from sklearn.metrics.pairwise import cosine_similarity
 import ast
 
 

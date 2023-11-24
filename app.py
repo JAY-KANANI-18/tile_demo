@@ -11,7 +11,7 @@ from firebase_admin import credentials
 cred = credentials.Certificate("./key.json")
 firebase_admin.initialize_app(cred)
 
-from sklearn.metrics.pairwise import cosine_similarity
+# from sklearn.metrics.pairwise import cosine_similarity
 
 # class TT:
 
