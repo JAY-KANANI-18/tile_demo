@@ -18,3 +18,4 @@ click
 typing_extensions
 h11
 uvicorn[standard]
+markupsafe
