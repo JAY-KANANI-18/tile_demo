@@ -16,3 +16,4 @@ flask_cors
 uvicorn
 click
 typing_extensions
+h11
