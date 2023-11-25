@@ -58,7 +58,7 @@ collection = database[collection_name]
 
 
 image_list = Load_Data().from_folder(['./main_carpet'])
-st = Search_Setup(image_list=image_list, model_name='vgg19', pretrained=True, image_count=100)
+st = Search_Setup(image_list=image_list, model_name='vgg19', pretrained=True, image_count=10)
 st.run_index()
 
 app = Flask(__name__)
