@@ -6,10 +6,10 @@ from flask import Flask, render_template, jsonify
 from flask_cors import CORS
 from fileinput import filename 
 import firebase_admin
-from firebase_admin import credentials
+# from firebase_admin import credentials
 
-cred = credentials.Certificate("./key.json")
-firebase_admin.initialize_app(cred)
+# cred = credentials.Certificate("./key.json")
+# firebase_admin.initialize_app(cred)
 
 # from sklearn.metrics.pairwise import cosine_similarity
 
