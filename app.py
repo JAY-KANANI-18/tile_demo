@@ -5,7 +5,7 @@ from DeepImageSearch import Load_Data,Search_Setup
 from flask import Flask, render_template, jsonify
 from flask_cors import CORS
 from fileinput import filename 
-import firebase_admin
+# import firebase_admin
 # from firebase_admin import credentials
 
 # cred = credentials.Certificate("./key.json")
