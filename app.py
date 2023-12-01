@@ -58,7 +58,7 @@ collection = database[collection_name]
 
 
 image_list = Load_Data().from_folder(['./main_carpet'])
-st = Search_Setup(image_list=image_list, model_name='vgg19', pretrained=True, image_count=2)
+st = Search_Setup(image_list=image_list, model_name='vgg19', pretrained=True, image_count=100)
 st.run_index()
 
 app = Flask(__name__)
@@ -92,7 +92,7 @@ def serve_image(filename):
 
 # Using the below, the popup message appears when the button is clicked on the webpage.
 @app.route('/add_carpet', methods=['POST'])
-def add_carpet():
+def add_carpet():   
         f = request.files['file'] 
         folder_path = './main_carpet'  # Destination folder
         file_path = os.path.join(folder_path, f.filename)
