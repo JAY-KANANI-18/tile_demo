@@ -34,16 +34,16 @@ from fileinput import filename
 import pymongo
 
 # Replace these values with your actual MongoDB connection details
-mongo_url = "mongodb://localhost:27017/"  # MongoDB connection URL
-database_name = "tile_project"  # Your database name
+# mongo_url = "mongodb://localhost:27017/"  # MongoDB connection URL
+# database_name = "tile_project"  # Your database name
 
 # Create a connection to MongoDB
-client = pymongo.MongoClient(mongo_url)
-database = client[database_name]
+# client = pymongo.MongoClient(mongo_url)
+# database = client[database_name]
 
 
 collection_name = "all_carpets"
-collection = database[collection_name]
+# collection = database[collection_name]
 
 
 # image_directory = './main_carpet'
