@@ -71,13 +71,15 @@ def index():
 
 @app.route('/carpets')
 def carpets():
-    all_documents = list(collection.find({}).sort("createdAt", -1))
+    # all_documents = list(collection.find({}).sort("createdAt", -1))
 
 
-    for document in all_documents:
-        document["_id"] = str(document["_id"])
+    # for document in all_documents:
+    #     document["_id"] = str(document["_id"])
 
-    return jsonify({"carpets":all_documents})
+    # return jsonify({"carpets":all_documents})
+
+    return jsonify({"carpets":"tako"})
 
 
 
