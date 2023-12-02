@@ -57,9 +57,9 @@ collection_name = "all_carpets"
 
 
 
-image_list = Load_Data().from_folder(['./main_carpet'])
-st = Search_Setup(image_list=image_list, model_name='vgg19', pretrained=True, image_count=100)
-st.run_index()
+# image_list = Load_Data().from_folder(['./main_carpet'])
+# st = Search_Setup(image_list=image_list, model_name='vgg19', pretrained=True, image_count=100)
+# st.run_index()
 
 app = Flask(__name__)
 CORS(app)
