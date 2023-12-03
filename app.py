@@ -53,7 +53,6 @@ image_names = [filename for filename in os.listdir(image_directory) if filename.
 # for image_name in image_names:
 #     database[collection_name].insert_one({"name": image_name})
 
-client.close()
 
 
 
@@ -136,6 +135,7 @@ def test():
 
 
     
+
 
 if __name__ == "__main__":
     app.run(debug=True,host='0.0.0.0',port=8000)
