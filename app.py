@@ -34,32 +34,32 @@ from fileinput import filename
 import pymongo
 
 # Replace these values with your actual MongoDB connection details
-# mongo_url = "mongodb://localhost:27017/"  # MongoDB connection URL
-# database_name = "tile_project"  # Your database name
+mongo_url = "mongodb+srv://revotechsolution23:DRkk7dLHXoJynFRL@cluster0.ps9gbjq.mongodb.net/"  # MongoDB connection URL
+database_name = "DESIGN_FINDER"  # Your database name
 
 # Create a connection to MongoDB
-# client = pymongo.MongoClient(mongo_url)
-# database = client[database_name]
-
+client = pymongo.MongoClient(mongo_url)
+database = client[database_name]
 
 collection_name = "all_carpets"
-# collection = database[collection_name]
+
+collection = database[collection_name]
 
 
-# image_directory = './main_carpet'
+image_directory = './main_carpet'
 
-# image_names = [filename for filename in os.listdir(image_directory) if filename.endswith(('.jpg', '.png', '.jpeg', '.gif', '.bmp'))]
+image_names = [filename for filename in os.listdir(image_directory) if filename.endswith(('.jpg', '.png', '.jpeg', '.gif', '.bmp'))]
 
 # for image_name in image_names:
 #     database[collection_name].insert_one({"name": image_name})
 
-# client.close()
+client.close()
 
 
 
-# image_list = Load_Data().from_folder(['./main_carpet'])
-# st = Search_Setup(image_list=image_list, model_name='vgg19', pretrained=True, image_count=100)
-# st.run_index()
+image_list = Load_Data().from_folder(['./main_carpet'])
+st = Search_Setup(image_list=image_list, model_name='vgg19', pretrained=True, image_count=100)
+st.run_index()
 
 app = Flask(__name__)
 CORS(app)
@@ -71,15 +71,14 @@ def index():
 
 @app.route('/carpets')
 def carpets():
-    # all_documents = list(collection.find({}).sort("createdAt", -1))
+    all_documents = list(collection.find({}).sort("createdAt", -1))
 
 
-    # for document in all_documents:
-    #     document["_id"] = str(document["_id"])
+    for document in all_documents:
+        document["_id"] = str(document["_id"])
 
-    # return jsonify({"carpets":all_documents})
+    return jsonify({"carpets":all_documents})
 
-    return jsonify({"carpets":"tako"})
 
 
 
