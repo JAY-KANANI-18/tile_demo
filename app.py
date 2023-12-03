@@ -34,7 +34,7 @@ from fileinput import filename
 import pymongo
 
 # Replace these values with your actual MongoDB connection details
-mongo_url = "mongodb+srv://revotechsolution23:DRkk7dLHXoJynFRL@cluster0.ps9gbjq.mongodb.net/"  # MongoDB connection URL
+mongo_url = "mongodb+srv://revotechsolution23:DRkk7dLHXoJynFRL@cluster0.ps9gbjq.mongodb.net"  # MongoDB connection URL
 database_name = "DESIGN_FINDER"  # Your database name
 
 # Create a connection to MongoDB
