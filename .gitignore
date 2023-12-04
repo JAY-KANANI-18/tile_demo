@@ -1,2 +1,4 @@
-/main_carpet
-/metadata-files
+/main_carpet/*
+/metadata-files/*
+/DeepImageSearch/*
+/__pycache__/*
