@@ -44,30 +44,30 @@ from pymongo.server_api import ServerApi
 
 # Replace these values with your actual MongoDB connection details
 # mongo_url = "mongodb+srv://revotechsolution23:DRkk7dLHXoJynFRL@cluster0.ps9gbjq.mongodb.net"  # MongoDB connection URL
-mongo_url = "mongodb+srv://revotechsolution23:DRkk7dLHXoJynFRL@cluster0.ps9gbjq.mongodb.net/?retryWrites=true&w=majority"  # MongoDB connection URL
+mongo_url = "mongodb+srv://revotechsolution23:FUATSOzYa2zzV1wp@cluster0.ps9gbjq.mongodb.net/"  # MongoDB connection URL
 database_name = "DESIGN_FINDER"  # Your database name
 
 # Create a connection to MongoDB
 
 
-# client = MongoClient(mongo_url)
-# database = client[database_name]
+client = MongoClient(mongo_url)
+database = client[database_name]
 
 
-# db_names = client.list_database_names()
+db_names = client.list_database_names()
 
         # If listing database names was successful, log the successful connection
-# print("Connected to MongoDB. Database names:", db_names)
+print("Connected to MongoDB. Database names:", db_names)
 
 
 collection_name = "all_carpets"
 
-# collection = database[collection_name]
+collection = database[collection_name]
 
 
 image_directory = './main_carpet'
 
-image_names = [filename for filename in os.listdir(image_directory) if filename.endswith(('.jpg', '.png', '.jpeg', '.gif', '.bmp'))]
+# image_names = [filename for filename in os.listdir(image_directory) if filename.endswith(('.jpg', '.png', '.jpeg', '.gif', '.bmp'))]
 
 # for image_name in image_names:
 #     database[collection_name].insert_one({"name": image_name})
@@ -98,13 +98,13 @@ def index():
 def carpets():
     print('called')
     all_documents = "tako"
-    # all_documents = list(collection.find({}).sort("createdAt", -1))
+    all_documents = list(collection.find({}).sort("createdAt", -1))
     print(all_documents)
 
 
-    # if len(all_documents) > 0 : 
-    #     for document in all_documents:
-    #         document["_id"] = str(document["_id"])
+    if len(all_documents) > 0 : 
+        for document in all_documents:
+            document["_id"] = str(document["_id"])
 
     return jsonify({"carpets":all_documents})
 
