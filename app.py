@@ -98,7 +98,7 @@ def index():
 def carpets():
     print('called')
     all_documents = "tako"
-    all_documents = list(collection.find({}).sort("createdAt", -1))
+    # all_documents = list(collection.find({}).sort("createdAt", -1))
     print(all_documents)
 
 
