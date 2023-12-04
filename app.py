@@ -67,10 +67,10 @@ collection = database[collection_name]
 
 image_directory = './main_carpet'
 
-# image_names = [filename for filename in os.listdir(image_directory) if filename.endswith(('.jpg', '.png', '.jpeg', '.gif', '.bmp'))]
+image_names = [filename for filename in os.listdir(image_directory) if filename.endswith(('.jpg', '.png', '.jpeg', '.gif', '.bmp'))]
 
-# for image_name in image_names:
-#     database[collection_name].insert_one({"name": image_name})
+for image_name in image_names:
+    database[collection_name].insert_one({"name": image_name})
 
 
 
@@ -80,7 +80,7 @@ app = Flask(__name__)
 CORS(app)
 
 image_list = Load_Data().from_folder(['./main_carpet'])
-st = Search_Setup(image_list=image_list, model_name='vgg19', pretrained=True, image_count=2)
+st = Search_Setup(image_list=image_list, model_name='vgg19', pretrained=True, image_count=0)
 st.run_index(True)
 
 @app.route('/init_data')
