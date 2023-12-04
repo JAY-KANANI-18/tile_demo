@@ -150,7 +150,7 @@ class Search_Setup:
         faiss.write_index(index, config.image_features_vectors_idx(self.model_name))
         print("\033[94m Saved The Indexed File:" + f"[metadata-files/{self.model_name}/image_features_vectors.idx]")
 
-    def run_index(self):
+    def run_index(self,y):
         """
         Indexes the images in the image_list and creates an index file for fast similarity search.
         """
@@ -159,10 +159,11 @@ class Search_Setup:
             self._start_indexing(data)
         else:
             print("\033[91m Metadata and Features are already present, Do you want Extract Again? Enter yes or no")
-            flag = str(input())
-            if flag.lower() == 'yes':
-                data = self._start_feature_extraction()
-                self._start_indexing(data)
+            # flag = str(input())
+            # if flag.lower() == 'yes':
+            if y :
+                 data = self._start_feature_extraction()
+                 self._start_indexing(data)
             else:
                 print("\033[93m Meta data already Present, Please Apply Search!")
                 print(os.listdir(f'metadata-files/{self.model_name}'))

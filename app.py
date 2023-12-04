@@ -28,22 +28,41 @@ from fileinput import filename
 #    similarity_percentages.append(similarity)
 #   return img_dict, similarity_percentages
 
+from pymongo import MongoClient
+from pymongo.server_api import ServerApi
+# uri = "mongodb+srv://revotechsolution23:DRkk7dLHXoJynFRL@cluster0.ps9gbjq.mongodb.net/?retryWrites=true&w=majority"
+# Create a new client and connect to the server
+# client = MongoClient(uri, server_api=ServerApi('1'))
+# Send a ping to confirm a successful connection
+# try:
+#     client.admin.command('ping')
+#     print("Pinged your deployment. You successfully connected to MongoDB!")
+# except Exception as e:
+#     print(e)
 
 
-
-import pymongo
 
 # Replace these values with your actual MongoDB connection details
-mongo_url = "mongodb+srv://revotechsolution23:DRkk7dLHXoJynFRL@cluster0.ps9gbjq.mongodb.net"  # MongoDB connection URL
+# mongo_url = "mongodb+srv://revotechsolution23:DRkk7dLHXoJynFRL@cluster0.ps9gbjq.mongodb.net"  # MongoDB connection URL
+mongo_url = "mongodb+srv://revotechsolution23:DRkk7dLHXoJynFRL@cluster0.ps9gbjq.mongodb.net/?retryWrites=true&w=majority"  # MongoDB connection URL
 database_name = "DESIGN_FINDER"  # Your database name
 
 # Create a connection to MongoDB
-client = pymongo.MongoClient(mongo_url)
-database = client[database_name]
+
+
+# client = MongoClient(mongo_url)
+# database = client[database_name]
+
+
+# db_names = client.list_database_names()
+
+        # If listing database names was successful, log the successful connection
+# print("Connected to MongoDB. Database names:", db_names)
+
 
 collection_name = "all_carpets"
 
-collection = database[collection_name]
+# collection = database[collection_name]
 
 
 image_directory = './main_carpet'
@@ -56,12 +75,19 @@ image_names = [filename for filename in os.listdir(image_directory) if filename.
 
 
 
-image_list = Load_Data().from_folder(['./main_carpet'])
-st = Search_Setup(image_list=image_list, model_name='vgg19', pretrained=True, image_count=100)
-st.run_index()
 
 app = Flask(__name__)
 CORS(app)
+
+
+@app.route('/init_data')
+def init_data():
+    image_list = Load_Data().from_folder(['./main_carpet'])
+    st = Search_Setup(image_list=image_list, model_name='vgg19', pretrained=True, image_count=100)
+    st.run_index(True)
+    return jsonify({"status":"suceess"})
+
+
 
 
 @app.route('/')
@@ -70,11 +96,15 @@ def index():
 
 @app.route('/carpets')
 def carpets():
+    print('called')
+    all_documents = "tako"
     all_documents = list(collection.find({}).sort("createdAt", -1))
+    print(all_documents)
 
 
-    for document in all_documents:
-        document["_id"] = str(document["_id"])
+    if len(all_documents) >0 : 
+        for document in all_documents:
+            document["_id"] = str(document["_id"])
 
     return jsonify({"carpets":all_documents})
 
@@ -135,7 +165,6 @@ def test():
 
 
     
-
 
 if __name__ == "__main__":
     app.run(debug=True,host='0.0.0.0',port=8000)
