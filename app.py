@@ -102,9 +102,9 @@ def carpets():
     print(all_documents)
 
 
-    if len(all_documents) >0 : 
-        for document in all_documents:
-            document["_id"] = str(document["_id"])
+    # if len(all_documents) > 0 : 
+    #     for document in all_documents:
+    #         document["_id"] = str(document["_id"])
 
     return jsonify({"carpets":all_documents})
 
