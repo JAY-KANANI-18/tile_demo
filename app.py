@@ -80,7 +80,7 @@ app = Flask(__name__)
 CORS(app)
 
 image_list = Load_Data().from_folder(['./main_carpet'])
-st = Search_Setup(image_list=image_list, model_name='vgg19', pretrained=True, image_count=100)
+st = Search_Setup(image_list=image_list, model_name='vgg19', pretrained=True, image_count=2)
 st.run_index(True)
 
 @app.route('/init_data')
