@@ -69,8 +69,8 @@ image_directory = './main_carpet'
 
 image_names = [filename for filename in os.listdir(image_directory) if filename.endswith(('.jpg', '.png', '.jpeg', '.gif', '.bmp'))]
 
-for image_name in image_names:
-    database[collection_name].insert_one({"name": image_name})
+# for image_name in image_names:
+#     database[collection_name].insert_one({"name": image_name})
 
 
 
