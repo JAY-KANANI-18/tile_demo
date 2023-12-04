@@ -79,6 +79,7 @@ image_directory = './main_carpet'
 app = Flask(__name__)
 CORS(app)
 
+st = ""
 
 @app.route('/init_data')
 def init_data():
