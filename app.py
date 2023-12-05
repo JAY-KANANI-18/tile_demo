@@ -5,6 +5,7 @@ from DeepImageSearch import Load_Data,Search_Setup
 from flask import Flask, render_template, jsonify
 from flask_cors import CORS
 from fileinput import filename 
+import json
 # import firebase_admin
 # from firebase_admin import credentials
 
@@ -69,8 +70,8 @@ image_directory = './main_carpet'
 
 image_names = [filename for filename in os.listdir(image_directory) if filename.endswith(('.jpg', '.png', '.jpeg', '.gif', '.bmp'))]
 
-# for image_name in image_names:
-#     database[collection_name].insert_one({"name": image_name})
+for image_name in image_names:
+    database[collection_name].insert_one({"name": image_name})
 
 
 
@@ -79,15 +80,48 @@ image_names = [filename for filename in os.listdir(image_directory) if filename.
 app = Flask(__name__)
 CORS(app)
 
-image_list = Load_Data().from_folder(['./main_carpet'])
-st = Search_Setup(image_list=image_list, model_name='vgg19', pretrained=True, image_count=1)
-st.run_index(True)
+# image_list = Load_Data().from_folder(['./main_carpet'])
+# st = Search_Setup(image_list=image_list, model_name='vgg19', pretrained=True, image_count=1)
+# st.run_index(True)
 
 @app.route('/init_data')
 def init_data():
     return jsonify({"status":"suceess"})
 
 
+@app.before_request
+def authenticate():
+    # Exclude certain routes from authentication (e.g., login and signup)
+    print('kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk')
+    excluded_routes = {'login', 'signup'}
+
+    if request.endpoint and request.endpoint in excluded_routes:
+        return
+
+    # Implement your authentication logic here
+    auth = request.authorization
+    data = request.get_json()
+
+    user = database["users"].find_one({"email":data["email"]})
+    print(user)
+
+    if user == None:
+        return jsonify({"sucess":False,"msg":"user not Found"})
+    
+    # if  : 
+    #      return jsonify({"sucess":False,"msg":"Authentication failed"})
+    
+
+    if "token" not in data or user["token"] != data["token"]:
+        return jsonify({"sucess":False,"msg":"Authentication failed"})
+    
+    return jsonify({"success":True,"msg":"Authenticate Successfull"})
+    # if not auth or not check_auth(auth.username, auth.password):
+    #     return jsonify({'error': 'Authentication failed'}), 401
+
+    # def check_auth(username, password):
+    # # Replace this with your actual authentication logic
+    # return username in authorized_users and authorized_users[username] == password
 
 
 @app.route('/')
@@ -134,6 +168,41 @@ def add_carpet():
         # st.run_index()  
 
         return jsonify({"success":1})
+
+@app.route('/signup',methods=['POST'])
+def signup():
+    print()
+
+    data = request.get_json()
+    print(data)
+    duplicate = database['users'].find_one({"email":data["email"]})
+    print(duplicate)
+    if duplicate != None:
+        print(True)
+        return jsonify({"status":"false","msg":"email exist"})
+    database['users'].insert_one(request.json)
+
+    print('Login called')
+    return jsonify({"status":"success","msg":"SignUp Successfull"})
+
+
+@app.route('/login',methods=['POST'])
+def login():
+    data=request.get_json()
+    print(data)
+    user_detail = database['users'].find_one({"email":data["email"]})
+    if user_detail == None :
+        print('user not register')
+        return jsonify({"status":"false","msg":"user not registered"})
+    if user_detail['password'] != data["password"]:
+        return jsonify({"status":"false","msg":"user name and password didn't match"})
+    
+    token = "xyxxyx"
+    database['users'].update_one({"email":data["email"]},{"$set":{"token":token}})
+    
+
+    
+    return jsonify({"status":"success","msg":"Login Successfull","data":{"token":token}})
 
 
 
