@@ -277,12 +277,12 @@ def signup():
     print(duplicate)
     if duplicate != None:
         print(True)
-        return jsonify({"status":"false","msg":"email exist"})
+        return jsonify({"status":False,"msg":"email exist"})
     request.json['password'] = hash_password(request.json['password'])
     database['users'].insert_one(request.json)
 
     print('Login called')
-    return jsonify({"status":"success","msg":"SignUp Successfull"})
+    return jsonify({"status":True,"msg":"SignUp Successfull"})
 
 
 @app.route('/login',methods=['POST'])

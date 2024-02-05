@@ -1,0 +1,6 @@
+sudo systemctl restart helloworld.service
+ sudo systemctldaemon-reload 
+
+ sudo nano /etc/systemd/system/helloworld.service 
+
+  source helloworld/venv/bin/activate
