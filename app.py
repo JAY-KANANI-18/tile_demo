@@ -9,13 +9,21 @@ import json
 import pickle
 import zipfile
 from services.aws import AWSS3Service 
+import bcrypt
 
-aws_access_key_id = 'AKIA36AHESWZB2MHEGGE'
-aws_secret_access_key = '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'
+aws_access_key_id = 'AKIA36AHESWZE7TYFMUL'
+# aws_secret_access_key = 'mpa1ied/zpcUJf7rSXmlkrFcO5zFMqly6mV/K80pc'
+aws_secret_access_key = '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'
 s3_service = AWSS3Service(aws_access_key_id, aws_secret_access_key)
 
-z= s3_service.list_buckets()
-print(z)
+import time
+import random
+
+def generate_unique_token():
+    timestamp = int(time.time() * time.time())  # Get current time in milliseconds
+    random_part = random.randint(0, 9999)  # Add a random component
+    token = f"{timestamp:013d}{random_part:04d}"
+    return token
 
 
 
@@ -55,6 +63,14 @@ from pymongo.server_api import ServerApi
 # except Exception as e:
 #     print(e)
 
+def hash_password(password):
+    # Generate a salt and hash the password
+    salt = bcrypt.gensalt()
+    hashed_password = bcrypt.hashpw(password.encode('utf-8'), salt)
+    return hashed_password
+def check_password(password, hashed_password):
+    # Check if the entered password matches the hashed password
+    return bcrypt.checkpw(password.encode('utf-8'), hashed_password)
 
 
 # Replace these values with your actual MongoDB connection details
@@ -95,13 +111,13 @@ image_names = [filename for filename in os.listdir(image_directory) if filename.
 #     collection2.insert_one({"data":data})
 
 
-import boto3
+# import boto3
 
 
 
-s3 = boto3.client('s3', aws_access_key_id=aws_access_key_id, aws_secret_access_key=aws_secret_access_key)
-response = s3.list_buckets()
-print('Buckets:', [bucket['Name'] for bucket in response['Buckets']])
+# s3 = boto3.client('s3', aws_access_key_id=aws_access_key_id, aws_secret_access_key=aws_secret_access_key)
+# response = s3.list_buckets()
+# print('Buckets:', [bucket['Name'] for bucket in response['Buckets']])
 
 
 
@@ -124,12 +140,13 @@ st.run_index(True)
 def authenticate():
     try:
 
-        print('kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk')
+        z= s3_service.list_buckets()
+        print(z)
         excluded_routes = {'login', 'signup', 'logout'}
 
         if request.endpoint and request.endpoint in excluded_routes:
             print(" line 131")
-            return True
+            return 
 
         user = None
 
@@ -167,10 +184,13 @@ def authenticate():
 
 @app.route('/auth')
 def auth():
-    print("reee")
-    data = request.get_data()
-    print(data)
-    return jsonify({'presigned_url': {}})
+    user =   database["users"].find_one({"token":request.headers["token"]})
+    print(user)
+    if(user):
+     return jsonify({'status': True})
+    else:
+     return jsonify({'status': False})
+        
 
 @app.route('/put_presigned_url', methods=['POST'])
 def get_presigned_url():
@@ -258,6 +278,7 @@ def signup():
     if duplicate != None:
         print(True)
         return jsonify({"status":"false","msg":"email exist"})
+    request.json['password'] = hash_password(request.json['password'])
     database['users'].insert_one(request.json)
 
     print('Login called')
@@ -271,16 +292,21 @@ def login():
     user_detail = database['users'].find_one({"email":data["email"]})
     if user_detail == None :
         print('user not register')
-        return jsonify({"status":"false","msg":"user not registered"})
-    if user_detail['password'] != data["password"]:
-        return jsonify({"status":"false","msg":"user name and password didn't match"})
+        return jsonify({"status":False,"msg":"user not registered"})
     
-    token = "xyxxyx"
+    res = check_password( data["password"],user_detail['password'] )
+    print(res)
+    # if user_detail['password'] != data["password"]:
+    #     return jsonify({"status":"false","msg":"user name and password didn't match"})
+    if not res :
+         return jsonify({"status":False,"msg":"user name and password didn't match"})
+
+    token = generate_unique_token()
     database['users'].update_one({"email":data["email"]},{"$set":{"token":token}})
     
 
     
-    return jsonify({"status":"success","msg":"Login Successfull","data":{"token":token}})
+    return jsonify({"status":True,"msg":"Login Successfull","data":{"token":token}})
 
 
 
