@@ -6,6 +6,20 @@ from flask import Flask, render_template, jsonify
 from flask_cors import CORS
 from fileinput import filename 
 import json
+import pickle
+import zipfile
+from services.aws import AWSS3Service 
+
+aws_access_key_id = 'AKIA36AHESWZB2MHEGGE'
+aws_secret_access_key = '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'
+s3_service = AWSS3Service(aws_access_key_id, aws_secret_access_key)
+
+z= s3_service.list_buckets()
+print(z)
+
+
+
+
 # import firebase_admin
 # from firebase_admin import credentials
 
@@ -64,72 +78,112 @@ print("Connected to MongoDB. Database names:", db_names)
 collection_name = "all_carpets"
 
 collection = database[collection_name]
+collection2 = database["metadata"]
 
 
 image_directory = './main_carpet'
 
 image_names = [filename for filename in os.listdir(image_directory) if filename.endswith(('.jpg', '.png', '.jpeg', '.gif', '.bmp'))]
 
-for image_name in image_names:
-    database[collection_name].insert_one({"name": image_name})
+# for image_name in image_names:
+#     database[collection_name].insert_one({"name": image_name})
 
+
+# with open('./metadata-files/vgg19/image_data_features.pkl','rb') as file :
+#     data= pickle.load(file)
+#     print('efjefej')
+#     collection2.insert_one({"data":data})
+
+
+import boto3
+
+
+
+s3 = boto3.client('s3', aws_access_key_id=aws_access_key_id, aws_secret_access_key=aws_secret_access_key)
+response = s3.list_buckets()
+print('Buckets:', [bucket['Name'] for bucket in response['Buckets']])
 
 
 
 
 app = Flask(__name__)
-CORS(app)
+CORS(app,  resources={r"/*": {"origins": "*"}})
 
-# image_list = Load_Data().from_folder(['./main_carpet'])
-# st = Search_Setup(image_list=image_list, model_name='vgg19', pretrained=True, image_count=1)
-# st.run_index(True)
+image_list = Load_Data().from_folder(['./main_carpet'])
+st = Search_Setup(image_list=image_list, model_name='vgg19', pretrained=True, image_count=1)
 
-@app.route('/init_data')
-def init_data():
-    return jsonify({"status":"suceess"})
+st.run_index(True)
+
+# collection.insert_one(st.model)
+# @app.route('/init_data')
+# def init_data():
+#     return jsonify({"status":"suceess"})
 
 
 @app.before_request
 def authenticate():
-    # Exclude certain routes from authentication (e.g., login and signup)
-    print('kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk')
-    excluded_routes = {'login', 'signup'}
+    try:
 
-    if request.endpoint and request.endpoint in excluded_routes:
-        return
+        print('kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk')
+        excluded_routes = {'login', 'signup', 'logout'}
 
-    # Implement your authentication logic here
-    auth = request.authorization
+        if request.endpoint and request.endpoint in excluded_routes:
+            print(" line 131")
+            return True
+
+        user = None
+
+        
+        user = database["users"].find_one({"email":request.headers["email"]})
+
+        if user == None:
+         print("connd true")
+         return jsonify({"sucess":False,"msg":"user not Found"})
+        print("cond false")
+
+        # if: 
+        #      return jsonify({"sucess":False,"msg":"Authentication failed"})
+
+
+        if "token" not in request.headers or user["token"] != request.headers["token"]:
+            return jsonify({"sucess":False,"msg":"Authentication failed"})
+
+            # return jsonify({"success":True,"msg":"Authenticate Successfull"})
+        # if not auth or not check_auth(auth.username, auth.password):
+        #     return jsonify({'error': 'Authentication failed'}), 401
+
+        # def check_auth(username, password):
+        # Replace this with your actual authentication logic
+        # return username in authorized_users and authorized_users[username] == password
+    except Exception as e :
+        print("error")
+        print(e)
+
+
+# @app.route('/')
+# def index():
+#     return render_template('index.html')
+
+
+@app.route('/auth')
+def auth():
+    print("reee")
+    data = request.get_data()
+    print(data)
+    return jsonify({'presigned_url': {}})
+
+@app.route('/put_presigned_url', methods=['POST'])
+def get_presigned_url():
     data = request.get_json()
+    filename = data.get('filename')
 
-    user = database["users"].find_one({"email":data["email"]})
-    print(user)
-
-    if user == None:
-        return jsonify({"sucess":False,"msg":"user not Found"})
-    
-    # if  : 
-    #      return jsonify({"sucess":False,"msg":"Authentication failed"})
-    
-
-    if "token" not in data or user["token"] != data["token"]:
-        return jsonify({"sucess":False,"msg":"Authentication failed"})
-    
-    return jsonify({"success":True,"msg":"Authenticate Successfull"})
-    # if not auth or not check_auth(auth.username, auth.password):
-    #     return jsonify({'error': 'Authentication failed'}), 401
-
-    # def check_auth(username, password):
-    # # Replace this with your actual authentication logic
-    # return username in authorized_users and authorized_users[username] == password
-
-
-@app.route('/')
-def index():
-    return render_template('index.html')
+    presigned_url = s3_service.generate_presigned_url("designfinder",filename,100)
+    return jsonify({'presigned_url': presigned_url})
 
 @app.route('/carpets')
 def carpets():
+    headers = {'Content-Type': 'application/json'}
+
     print('called')
     all_documents = "tako"
     all_documents = list(collection.find({}).sort("createdAt", -1))
@@ -156,18 +210,42 @@ def serve_image(filename):
 
 # Using the below, the popup message appears when the button is clicked on the webpage.
 @app.route('/add_carpet', methods=['POST'])
-def add_carpet():   
-        f = request.files['file'] 
-        folder_path = './main_carpet'  # Destination folder
-        file_path = os.path.join(folder_path, f.filename)
-        f.save(file_path)
-        st.add_images_to_index(new_image_paths=[file_path]) 
-        database[collection_name].insert_one({"name": f.filename})
+def add_carpet():
+        data = request.get_json()
+        filename = data.get('filename')
+        # if 'file' not in request.files:
+        #  return jsonify({"success": False, "msg": "No file part"})
+   
+        # zip_file = request.files['zipFile']
+        # print(zip_file)
+
+        # files = request.files.getlist('files')
+
+        # print(files)
+        
+        # for f in files:
+         
+        # print(f,end=" ") 
+        # folder_path = './main_carpet'  # Destination folder
+        # file_path = os.path.join(folder_path, f.filename)
+        # f.save(file_path)
+        # print(file_path)
+        # st.add_images_to_index(new_image_paths=[filename])
+        database["collection"].insert_one({"name": filename})
+        # database[collection_name].insert_one({"name": f.filename})
+        st.run_index(True)
+        # folder_path = './main_carpet'  # Destination folder
+        # file_path = os.path.normpath(os.path.join(folder_path, 'folder.zip'))
+        # zip_file.save(file_path)
+        # file_path2 = os.path.normpath(os.path.join('./main_carpet', 'folder1'))
+        # with zipfile.ZipFile(file_path, 'r') as zip_ref:
+        #  zip_ref.extractall(file_path2)
+
+           
+        return jsonify({"success":True,"msg":"Image add successfully"})
 
 
-        # st.run_index()  
 
-        return jsonify({"success":1})
 
 @app.route('/signup',methods=['POST'])
 def signup():
@@ -232,8 +310,6 @@ def test():
 
     return jsonify(names_str)
 
-
-    
 
 if __name__ == "__main__":
     app.run(debug=True,host='0.0.0.0',port=8000)

@@ -79,6 +79,7 @@ class Search_Setup:
         self.pretrained = pretrained
         self.image_data = pd.DataFrame()
         self.d = None
+
         if image_count==None:
             self.image_list = image_list
         else:
@@ -95,7 +96,9 @@ class Search_Setup:
         print("\033[91m Please Wait Model Is Loading or Downloading From Server!")
         base_model = timm.create_model(self.model_name, pretrained=self.pretrained)
         self.model = torch.nn.Sequential(*list(base_model.children())[:-1])
+
         self.model.eval()
+        print(self.model.eval())
         print(f"\033[92m Model Loaded Successfully: {model_name}")
 
     def _extract(self, img):
@@ -148,6 +151,7 @@ class Search_Setup:
         features_matrix = np.vstack(image_data['features'].values).astype(np.float32)
         index.add(features_matrix)  # Add the features matrix to the index
         faiss.write_index(index, config.image_features_vectors_idx(self.model_name))
+        print(config.image_features_vectors_idx(self.model_name))
         print("\033[94m Saved The Indexed File:" + f"[metadata-files/{self.model_name}/image_features_vectors.idx]")
 
     def run_index(self,y):
