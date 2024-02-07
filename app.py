@@ -1,5 +1,6 @@
+import io
 import os
-from flask import Flask, request, jsonify, send_from_directory
+from flask import Flask, request, jsonify, send_file, send_from_directory
 from werkzeug.utils import secure_filename
 from DeepImageSearch import Load_Data,Search_Setup
 from flask import Flask, render_template, jsonify
@@ -122,7 +123,7 @@ def authenticate():
     try:
 
     
-        excluded_routes = {'login', 'signup', 'logout'}
+        excluded_routes = {'login', 'signup', 'logout',"get_image"}
 
         if request.endpoint and request.endpoint in excluded_routes:
             print(" line 131")
@@ -170,9 +171,10 @@ def signup():
         print(True)
         return jsonify({"status":False,"msg":"email exist"})
     request.json['password'] = hash_password(request.json['password'])
-    database['users'].insert_one(request.json)
-    s3_service.upload_file("metadata-files/vgg19/image_data_features.pkl","designfinder",f"{request.json['email']}/meta/image_data_features.pkl")
-    s3_service.upload_file("metadata-files/vgg19/image_features_vectors.idx","designfinder",f"{request.json['email']}/meta/image_features_vectors.idx")
+    user = database['users'].insert_one(request.json)
+    print()
+    s3_service.upload_file("metadata-files/vgg19/image_data_features.pkl","designfinder",f"{user.inserted_id}/meta/image_data_features.pkl")
+    s3_service.upload_file("metadata-files/vgg19/image_features_vectors.idx","designfinder",f"{user.inserted_id}/meta/image_features_vectors.idx")
 
     print('Login called')
     return jsonify({"status":True,"msg":"SignUp Successfull"})
@@ -196,10 +198,10 @@ def login():
 
     token = generate_unique_token()
     database['users'].update_one({"email":data["email"]},{"$set":{"token":token}})
-    
+    user_detail["_id"] = str(user_detail["_id"])
 
     
-    return jsonify({"status":True,"msg":"Login Successfull","data":{"token":token}})
+    return jsonify({"status":True,"msg":"Login Successfull","data":{"token":token,"user":user_detail["_id"]}})
 
 
 @app.route('/collections/create', methods=['POST'])
@@ -236,28 +238,39 @@ def get_collections_list():
                 "from": "collections",
                 "localField": "collections",
                 "foreignField": "_id",
+                "pipeline":[{"$project":{"_id":0}}],
                 "as": "collections"
               }
         },
+        {
+            "$project":{
+                "_id":0,
+                "password":0
+            }
+        }
      ]
-     user_detail = database["users"].aggregate(pipeline)
-
-     print(list(user_detail))
-     return jsonify({"status":True})
+     user_detail = list(database["users"].aggregate(pipeline))
+     if user_detail:
+      print(user_detail)
+      return jsonify({"status":True,"data":(user_detail)})
+     else:
+        return jsonify({"status":False})
     except Exception as e:
+        return jsonify({"status":False,"data":None,"error":str(e)})
+
         print("eeeeeeeeeeeeeee")
         print(e)
 
 
-@app.route('/collections/details', methods=['GET'])
+@app.route('/collections/details', methods=['POST'])
 def collection_details():
     try:
      
      data = request.get_json()
 
-     s = ObjectId( data["collection_id"])
+     s =  data["collection_name"]
 
-     collection =  database["collections"].find_one({"_id" :s})
+     collection =  database["collections"].find_one({"name" :s})
      print(collection)
     
      collection['_id'] = str(collection['_id'])
@@ -285,13 +298,14 @@ def put_presigned_url():
 def get_presigned_url():
     data = request.get_json()
     filename = data.get('filename')
-    filename = "jay/meta/meta.pkl"
-    filename2 = "jay/meta/meta.idx"
+    # filename = "jay/meta/meta.pkl"
+    # filename2 = "jay/meta/meta.idx"
 
 
     presigned_url = s3_service.generate_get_presigned_url("designfinder",filename,100000)
-    presigned_url2 = s3_service.generate_get_presigned_url("designfinder",filename2,100000)
-    return jsonify({'presigned_grt_ url': presigned_url,'presigned_grt_ url2': presigned_url2})
+    # presigned_url2 = s3_service.generate_get_presigned_url("designfinder",filename2,100000)
+    # return jsonify({'presigned_grt_ url': presigned_url,'presigned_grt_ url2': presigned_url2})
+    return jsonify({'presigned_grt_ url': presigned_url})
 
 
 @app.route('/collections/images/add', methods=['POST'])
@@ -314,17 +328,45 @@ def add_images():
         print(e)
 
 
+@app.route('/get_image', methods=['GET'])
+def get_image():
+    # data = request.get_json()
+    bucket_name = "designfinder"  # Update with your bucket name
+    filename = request.args.get('filename')
+    print(filename)
+
+    # Fetch the image data from S3
+    try:
+        print()
+        response = s3_service.read_file_from_s3_local(Bucket=bucket_name, Key=str(filename))
+        image_data = response['Body'].read()
+
+        # Set the appropriate content type for the image
+        content_type = response['ContentType']
+
+        # Return the image data with the appropriate content type
+        return send_file(
+            io.BytesIO(image_data),
+            mimetype=content_type
+        )
+    except Exception as e:
+        # Handle exceptions such as file not found
+        print (str(e))
+        return str(e), 404
+
+
+
 @app.route('/add_carpet', methods=['POST'])
 def add_carpet():
         data = request.get_json()
         array = data["files"]
-        database["collections"].find_one_and_update({"_id": ObjectId(data["collection_id"])},{"$push":{"images":data["files"]}})
         user = database["users"].find_one({"_id": ObjectId(data["user_id"])})
         print(user)
         st1 = Search_Setup(image_list=image_list, file_path='vgg19', pretrained=True, image_count=107)
         user_id = user["_id"]
         for each in array:
             print(each)
+            database["collections"].find_one_and_update({"_id": ObjectId(data["collection_id"])},{"$push":{"images":each}})
             file = s3_service.read_file_from_s3(f"jay/collectio1/{each}",local_path=each)
             # print(file)
 

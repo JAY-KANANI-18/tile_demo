@@ -104,3 +104,29 @@ class AWSS3Service:
       return local_file_name
      except Exception as e:
        print(e)
+
+    def read_file_from_s3_local(self,Bucket,Key):
+     try: 
+    #   local_file_name = f'test/{local_path}'
+      response = self.s3.get_object(Bucket="designfinder", Key=Key)
+
+      return response
+    #   if not response:
+    #       source_path = "metadata-files\vgg19\image_data_features.pkl"
+    #       source_path1 = "metadata-files\vgg19\image_features_vectors.idx"
+    #       destination_path = local_path
+    #       destination_path1 = f"test/{}"
+    #       with open(source_path, 'rb') as source_file:
+    # # Open the destination file for writing in binary mode
+    #          with open(destination_path, 'wb') as destination_file:
+    #     # Read the content of the source file and write it to the destination file
+    #             destination_file.write(source_file.read())
+
+    #       print(f"File copied from {source_path} to {destination_path}")
+          
+        
+          
+      
+    #  file_content = response['Body'].read()
+     except Exception as e:
+        print(e)
