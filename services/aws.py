@@ -28,8 +28,8 @@ class AWSS3Service:
         try:
             url = self.s3.generate_presigned_url(
                 'get_object',
-                Params={'Bucket': bucket_name, 'Key': object_key},
-                ExpiresIn=expiration_time
+                Params={'Bucket': bucket_name, 'Key': object_key,"ResponseContentDisposition": 'attachment'},
+                ExpiresIn=expiration_time,
             )
             return url
         except NoCredentialsError:

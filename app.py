@@ -305,7 +305,7 @@ def get_presigned_url():
     presigned_url = s3_service.generate_get_presigned_url("designfinder",filename,100000)
     # presigned_url2 = s3_service.generate_get_presigned_url("designfinder",filename2,100000)
     # return jsonify({'presigned_grt_ url': presigned_url,'presigned_grt_ url2': presigned_url2})
-    return jsonify({'presigned_grt_ url': presigned_url})
+    return jsonify({'presigned_grt_url': presigned_url})
 
 
 @app.route('/collections/images/add', methods=['POST'])
