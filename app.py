@@ -54,32 +54,27 @@ def generate_unique_token():
 
 from pymongo import MongoClient
 from pymongo.server_api import ServerApi
-# uri = "mongodb+srv://revotechsolution23:DRkk7dLHXoJynFRL@cluster0.ps9gbjq.mongodb.net/?retryWrites=true&w=majority"
-# Create a new client and connect to the server
-# client = MongoClient(uri, server_api=ServerApi('1'))
-# Send a ping to confirm a successful connection
-# try:
-#     client.admin.command('ping')
-#     print("Pinged your deployment. You successfully connected to MongoDB!")
-# except Exception as e:
-#     print(e)
+
 
 def hash_password(password):
-    # Generate a salt and hash the password
     salt = bcrypt.gensalt()
     hashed_password = bcrypt.hashpw(password.encode('utf-8'), salt)
     return hashed_password
 def check_password(password, hashed_password):
-    # Check if the entered password matches the hashed password
     return bcrypt.checkpw(password.encode('utf-8'), hashed_password)
 
+def remove_files(file_path):
+    if os.path.exists(file_path):
+         os.remove(file_path)
+         print(f"{file_path} removed successfully")
+    else:
+        print(f"The file {file_path} does not exist")
+        return jsonify({"success":True,"msg":"Image add successfully"})
 
-# Replace these values with your actual MongoDB connection details
-# mongo_url = "mongodb+srv://revotechsolution23:DRkk7dLHXoJynFRL@cluster0.ps9gbjq.mongodb.net"  # MongoDB connection URL
+
 mongo_url = "mongodb+srv://revotechsolution23:FUATSOzYa2zzV1wp@cluster0.ps9gbjq.mongodb.net/"  # MongoDB connection URL
 database_name = "DESIGN_FINDER"  # Your database name
 
-# Create a connection to MongoDB
 
 
 client = MongoClient(mongo_url)
@@ -88,18 +83,18 @@ database = client[database_name]
 
 db_names = client.list_database_names()
 
-        # If listing database names was successful, log the successful connection
+# If listing database names was successful, log the successful connection
 print("Connected to MongoDB. Database names:", db_names)
 
 
-collection_name = "all_carpets"
 
+collection_name = "all_carpets"
 collection = database[collection_name]
 collection2 = database["metadata"]
 
 
-image_directory = './main_carpet'
 
+image_directory = './main_carpet'
 image_names = [filename for filename in os.listdir(image_directory) if filename.endswith(('.jpg', '.png', '.jpeg', '.gif', '.bmp'))]
 
 # for image_name in image_names:
@@ -117,18 +112,9 @@ image_names = [filename for filename in os.listdir(image_directory) if filename.
 
 app = Flask(__name__)
 CORS(app,  resources={r"/*": {"origins": "*"}})
-
 image_list = Load_Data().from_folder(['./main_carpet'])
-
-
-# st.run_index(True)
-
-
-
-# collection.insert_one(st.model)
-# @app.route('/init_data')
-# def init_data():
-#     return jsonify({"status":"suceess"})
+st = Search_Setup(image_list=image_list, file_path='vgg19', pretrained=True, image_count=1)
+st.run_index(True)
 
 
 @app.before_request
@@ -162,7 +148,6 @@ def authenticate():
         print(e)
 
 
-
 @app.route('/auth')
 def auth():
     user =   database["users"].find_one({"token":request.headers["token"]})
@@ -171,187 +156,6 @@ def auth():
      return jsonify({'status': True})
     else:
      return jsonify({'status': False})
-        
-
-@app.route('/put_presigned_url', methods=['POST'])
-def put_presigned_url():
-    data = request.get_json()
-    filename = data.get('filename')
-    z= s3_service.generate_get_presigned_url("designfinder","meta.pkl",100000)
-    print(z)
-
-    presigned_url = s3_service.generate_presigned_url("designfinder",filename,100)
-    return jsonify({'presigned_url': presigned_url})
-
-@app.route('/get_presigned_url', methods=['POST'])
-def get_presigned_url():
-    data = request.get_json()
-    filename = data.get('filename')
-    filename = "jay/meta/meta.pkl"
-    filename2 = "jay/meta/meta.idx"
-
-
-    presigned_url = s3_service.generate_get_presigned_url("designfinder",filename,100000)
-    presigned_url2 = s3_service.generate_get_presigned_url("designfinder",filename2,100000)
-    return jsonify({'presigned_grt_ url': presigned_url,'presigned_grt_ url2': presigned_url2})
-
-
-@app.route('/collections', methods=['POST'])
-def get_collections_list():
-    try:
-     print(request.headers["token"] )
-     token = request.headers["token"]
-     pipeline = [ 
-         {"$match" : {"token":token  } },
-         {
-            "$lookup": {
-                "from": "collections",
-                "localField": "collections",
-                "foreignField": "_id",
-                "as": "collections"
-              }
-        },
-     ]
-     user_detail = database["users"].aggregate(pipeline)
-
-     print(list(user_detail))
-     return jsonify({"status":True})
-    except Exception as e:
-        print("eeeeeeeeeeeeeee")
-        print(e)
-
-
-
-@app.route('/collections/create', methods=['POST'])
-def add_collection():
-    try:
-     
-     data = request.get_json()
-
-     collection =  database['collections'].insert_one(request.json)
-     print(collection.inserted_id)
-     user_detail = database["users"].find_one_and_update(
-         {"token": request.headers["token"]},
-         {"$push": {"collections":collection.inserted_id}},
-         return_document=True 
-     )
-     return jsonify({"status":True})
-
-
-
-    except TypeError as e:
-        print("eeeeeeeeeeeeeee")
-        print(e)
-
-# class CustomJSONEncoder(json.JSONEncoder):
-#     def default(self, obj):
-#         if isinstance(obj, ObjectId):
-#             return str(obj)
-#         return json.JSONEncoder.default(self, obj)
-
-# app.json_encoder = CustomJSONEncoder
-       
-@app.route('/collections/details', methods=['GET'])
-def collection_details():
-    try:
-     
-     data = request.get_json()
-
-     s = ObjectId( data["collection_id"])
-
-     collection =  database["collections"].find_one({"_id" :s})
-     print(collection)
-    
-     collection['_id'] = str(collection['_id'])
-     return jsonify({"status":True,"data":(collection)})
-
-
-
-    except Exception as e:
-        print("eeeeeeeeeeeeeee")
-        print(e)
-
-@app.route('/collections/images/add', methods=['POST'])
-def add_images():
-    try:
-     
-     data = request.get_json()
-
-     s = ObjectId( data["collection_id"])
-     image =data["image"]
-
-     collection =  database["collections"].find_one_and_update({"_id" :s},{"$push":{"images":image}})
-    
-     return jsonify({"status":True})
-
-
-
-    except Exception as e:
-        print("eeeeeeeeeeeeeee")
-        print(e)
-
-@app.route('/carpets')
-def carpets():
-    headers = {'Content-Type': 'application/json'}
-
-    print('called')
-    all_documents = "tako"
-    all_documents = list(collection.find({}).sort("createdAt", -1))
-    print(all_documents)
-
-
-    if len(all_documents) > 0 : 
-        for document in all_documents:
-            document["_id"] = str(document["_id"])
-
-    return jsonify({"carpets":all_documents})
-
-
-@app.route('/main_carpet/<path:filename>')
-def serve_image(filename):
-    print('runiiiiiiiiiiiiiii')
-    return send_from_directory('./main_carpet', filename)
-
-
-
-# Using the below, the popup message appears when the button is clicked on the webpage.
-@app.route('/add_carpet', methods=['POST'])
-def add_carpet():
-        data = request._get_file_stream()
-        print(data)
-        # filename = data.get('filename')
-        # if 'file' not in request.files:
-        #  return jsonify({"success": False, "msg": "No file part"})
-   
-        # zip_file = request.files['zipFile']
-        # print(zip_file)
-
-        # files = request.files
-
-        # print(files)
-        
-        # for f in files:
-         
-        # print(f,end=" ") 
-        # folder_path = './main_carpet'  # Destination folder
-        # file_path = os.path.join(folder_path, f.filename)
-        # f.save(file_path)
-        # print(file_path)
-        # st.add_images_to_index(new_image_paths=[filename])
-        # database["collection"].insert_one({"name": filename})
-        # database[collection_name].insert_one({"name": f.filename})
-        # st.run_index(True)
-        # folder_path = './main_carpet'  # Destination folder
-        # file_path = os.path.normpath(os.path.join(folder_path, 'folder.zip'))
-        # zip_file.save(file_path)
-        # file_path2 = os.path.normpath(os.path.join('./main_carpet', 'folder1'))
-        # with zipfile.ZipFile(file_path, 'r') as zip_ref:
-        #  zip_ref.extractall(file_path2)
-
-           
-        return jsonify({"success":True,"msg":"Image add successfully"})
-
-
 
 
 @app.route('/signup',methods=['POST'])
@@ -367,6 +171,8 @@ def signup():
         return jsonify({"status":False,"msg":"email exist"})
     request.json['password'] = hash_password(request.json['password'])
     database['users'].insert_one(request.json)
+    s3_service.upload_file("metadata-files/vgg19/image_data_features.pkl","designfinder",f"{request.json['email']}/meta/image_data_features.pkl")
+    s3_service.upload_file("metadata-files/vgg19/image_features_vectors.idx","designfinder",f"{request.json['email']}/meta/image_features_vectors.idx")
 
     print('Login called')
     return jsonify({"status":True,"msg":"SignUp Successfull"})
@@ -396,8 +202,164 @@ def login():
     return jsonify({"status":True,"msg":"Login Successfull","data":{"token":token}})
 
 
+@app.route('/collections/create', methods=['POST'])
+def add_collection():
+    try:
+     
+     data = request.get_json()
+
+     collection =  database['collections'].insert_one(request.json)
+     print(collection.inserted_id)
+     user_detail = database["users"].find_one_and_update(
+         {"token": request.headers["token"]},
+         {"$push": {"collections":collection.inserted_id}},
+         return_document=True 
+     )
+     return jsonify({"status":True})
 
 
+
+    except TypeError as e:
+        print("eeeeeeeeeeeeeee")
+        print(e)
+
+     
+@app.route('/collections', methods=['POST'])
+def get_collections_list():
+    try:
+     print(request.headers["token"] )
+     token = request.headers["token"]
+     pipeline = [ 
+         {"$match" : {"token":token  } },
+         {
+            "$lookup": {
+                "from": "collections",
+                "localField": "collections",
+                "foreignField": "_id",
+                "as": "collections"
+              }
+        },
+     ]
+     user_detail = database["users"].aggregate(pipeline)
+
+     print(list(user_detail))
+     return jsonify({"status":True})
+    except Exception as e:
+        print("eeeeeeeeeeeeeee")
+        print(e)
+
+
+@app.route('/collections/details', methods=['GET'])
+def collection_details():
+    try:
+     
+     data = request.get_json()
+
+     s = ObjectId( data["collection_id"])
+
+     collection =  database["collections"].find_one({"_id" :s})
+     print(collection)
+    
+     collection['_id'] = str(collection['_id'])
+     return jsonify({"status":True,"data":(collection)})
+
+
+
+    except Exception as e:
+        print("eeeeeeeeeeeeeee")
+        print(e)
+
+
+@app.route('/put_presigned_url', methods=['POST'])
+def put_presigned_url():
+    data = request.get_json()
+    filename = data.get('filename')
+    z= s3_service.generate_get_presigned_url("designfinder","meta.pkl",100000)
+    print(z)
+
+    presigned_url = s3_service.generate_presigned_url("designfinder",filename,100)
+    return jsonify({'presigned_url': presigned_url})
+
+
+@app.route('/get_presigned_url', methods=['POST'])
+def get_presigned_url():
+    data = request.get_json()
+    filename = data.get('filename')
+    filename = "jay/meta/meta.pkl"
+    filename2 = "jay/meta/meta.idx"
+
+
+    presigned_url = s3_service.generate_get_presigned_url("designfinder",filename,100000)
+    presigned_url2 = s3_service.generate_get_presigned_url("designfinder",filename2,100000)
+    return jsonify({'presigned_grt_ url': presigned_url,'presigned_grt_ url2': presigned_url2})
+
+
+@app.route('/collections/images/add', methods=['POST'])
+def add_images():
+    try:
+     
+     data = request.get_json()
+
+     s = ObjectId( data["collection_id"])
+     image =data["image"]
+
+     collection =  database["collections"].find_one_and_update({"_id" :s},{"$push":{"images":image}})
+    
+     return jsonify({"status":True})
+
+
+
+    except Exception as e:
+        print("eeeeeeeeeeeeeee")
+        print(e)
+
+
+@app.route('/add_carpet', methods=['POST'])
+def add_carpet():
+        data = request.get_json()
+        array = data["files"]
+        database["collections"].find_one_and_update({"_id": ObjectId(data["collection_id"])},{"$push":{"images":data["files"]}})
+        user = database["users"].find_one({"_id": ObjectId(data["user_id"])})
+        print(user)
+        st1 = Search_Setup(image_list=image_list, file_path='vgg19', pretrained=True, image_count=107)
+        user_id = user["_id"]
+        for each in array:
+            print(each)
+            file = s3_service.read_file_from_s3(f"jay/collectio1/{each}",local_path=each)
+            # print(file)
+
+           
+        file = st1.add_images_to_index(array,user_id)
+        s3_service.upload_file(file_path=f'test/{user_id}.pkl',bucket_name="designfinder",object_key=f"jay/meta/image_data_features1.pkl")
+        s3_service.upload_file(file_path=f'test/{user_id}.idx',bucket_name="designfinder",object_key=f"jay/meta/image_features_vectors2.idx")
+        remove_files(f"test/{user_id}.pkl")
+        remove_files(f"test/{user_id}.idx")
+        for each in array:
+            remove_files(f"test/{each}")
+        return jsonify({"status":True})
+
+
+@app.route('/carpets')
+def carpets():
+    headers = {'Content-Type': 'application/json'}
+
+    print('called')
+    all_documents = "tako"
+    all_documents = list(collection.find({}).sort("createdAt", -1))
+    print(all_documents)
+
+
+    if len(all_documents) > 0 : 
+        for document in all_documents:
+            document["_id"] = str(document["_id"])
+
+    return jsonify({"carpets":all_documents})
+
+
+@app.route('/main_carpet/<path:filename>')
+def serve_image(filename):
+    print('runiiiiiiiiiiiiiii')
+    return send_from_directory('./main_carpet', filename)
 
 
 @app.route('/test', methods=['POST'])
