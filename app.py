@@ -10,10 +10,11 @@ import pickle
 import zipfile
 from services.aws import AWSS3Service 
 import bcrypt
+from bson import ObjectId
 
-aws_access_key_id = 'AKIA36AHESWZE7TYFMUL'
-# aws_secret_access_key = 'mpa1ied/zpcUJf7rSXmlkrFcO5zFMqly6mV/K80pc'
-aws_secret_access_key = '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'
+aws_access_key_id = 'AKIA36AHESWZI7QE4N7H'
+aws_secret_access_key = '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'
+# aws_secret_access_key = 'GUj2rOeT0wDmIsbWfgTAYe0nW5kOZGSfabP7QVh9'
 s3_service = AWSS3Service(aws_access_key_id, aws_secret_access_key)
 
 import time
@@ -111,14 +112,6 @@ image_names = [filename for filename in os.listdir(image_directory) if filename.
 #     collection2.insert_one({"data":data})
 
 
-# import boto3
-
-
-
-# s3 = boto3.client('s3', aws_access_key_id=aws_access_key_id, aws_secret_access_key=aws_secret_access_key)
-# response = s3.list_buckets()
-# print('Buckets:', [bucket['Name'] for bucket in response['Buckets']])
-
 
 
 
@@ -126,9 +119,11 @@ app = Flask(__name__)
 CORS(app,  resources={r"/*": {"origins": "*"}})
 
 image_list = Load_Data().from_folder(['./main_carpet'])
-st = Search_Setup(image_list=image_list, model_name='vgg19', pretrained=True, image_count=1)
 
-st.run_index(True)
+
+# st.run_index(True)
+
+
 
 # collection.insert_one(st.model)
 # @app.route('/init_data')
@@ -140,8 +135,7 @@ st.run_index(True)
 def authenticate():
     try:
 
-        z= s3_service.list_buckets()
-        print(z)
+    
         excluded_routes = {'login', 'signup', 'logout'}
 
         if request.endpoint and request.endpoint in excluded_routes:
@@ -158,28 +152,15 @@ def authenticate():
          return jsonify({"sucess":False,"msg":"user not Found"})
         print("cond false")
 
-        # if: 
-        #      return jsonify({"sucess":False,"msg":"Authentication failed"})
-
-
+ 
         if "token" not in request.headers or user["token"] != request.headers["token"]:
             return jsonify({"sucess":False,"msg":"Authentication failed"})
 
-            # return jsonify({"success":True,"msg":"Authenticate Successfull"})
-        # if not auth or not check_auth(auth.username, auth.password):
-        #     return jsonify({'error': 'Authentication failed'}), 401
-
-        # def check_auth(username, password):
-        # Replace this with your actual authentication logic
-        # return username in authorized_users and authorized_users[username] == password
+       
     except Exception as e :
         print("error")
         print(e)
 
-
-# @app.route('/')
-# def index():
-#     return render_template('index.html')
 
 
 @app.route('/auth')
@@ -193,12 +174,121 @@ def auth():
         
 
 @app.route('/put_presigned_url', methods=['POST'])
-def get_presigned_url():
+def put_presigned_url():
     data = request.get_json()
     filename = data.get('filename')
+    z= s3_service.generate_get_presigned_url("designfinder","meta.pkl",100000)
+    print(z)
 
     presigned_url = s3_service.generate_presigned_url("designfinder",filename,100)
     return jsonify({'presigned_url': presigned_url})
+
+@app.route('/get_presigned_url', methods=['POST'])
+def get_presigned_url():
+    data = request.get_json()
+    filename = data.get('filename')
+    filename = "jay/meta/meta.pkl"
+    filename2 = "jay/meta/meta.idx"
+
+
+    presigned_url = s3_service.generate_get_presigned_url("designfinder",filename,100000)
+    presigned_url2 = s3_service.generate_get_presigned_url("designfinder",filename2,100000)
+    return jsonify({'presigned_grt_ url': presigned_url,'presigned_grt_ url2': presigned_url2})
+
+
+@app.route('/collections', methods=['POST'])
+def get_collections_list():
+    try:
+     print(request.headers["token"] )
+     token = request.headers["token"]
+     pipeline = [ 
+         {"$match" : {"token":token  } },
+         {
+            "$lookup": {
+                "from": "collections",
+                "localField": "collections",
+                "foreignField": "_id",
+                "as": "collections"
+              }
+        },
+     ]
+     user_detail = database["users"].aggregate(pipeline)
+
+     print(list(user_detail))
+     return jsonify({"status":True})
+    except Exception as e:
+        print("eeeeeeeeeeeeeee")
+        print(e)
+
+
+
+@app.route('/collections/create', methods=['POST'])
+def add_collection():
+    try:
+     
+     data = request.get_json()
+
+     collection =  database['collections'].insert_one(request.json)
+     print(collection.inserted_id)
+     user_detail = database["users"].find_one_and_update(
+         {"token": request.headers["token"]},
+         {"$push": {"collections":collection.inserted_id}},
+         return_document=True 
+     )
+     return jsonify({"status":True})
+
+
+
+    except TypeError as e:
+        print("eeeeeeeeeeeeeee")
+        print(e)
+
+# class CustomJSONEncoder(json.JSONEncoder):
+#     def default(self, obj):
+#         if isinstance(obj, ObjectId):
+#             return str(obj)
+#         return json.JSONEncoder.default(self, obj)
+
+# app.json_encoder = CustomJSONEncoder
+       
+@app.route('/collections/details', methods=['GET'])
+def collection_details():
+    try:
+     
+     data = request.get_json()
+
+     s = ObjectId( data["collection_id"])
+
+     collection =  database["collections"].find_one({"_id" :s})
+     print(collection)
+    
+     collection['_id'] = str(collection['_id'])
+     return jsonify({"status":True,"data":(collection)})
+
+
+
+    except Exception as e:
+        print("eeeeeeeeeeeeeee")
+        print(e)
+
+@app.route('/collections/images/add', methods=['POST'])
+def add_images():
+    try:
+     
+     data = request.get_json()
+
+     s = ObjectId( data["collection_id"])
+     image =data["image"]
+
+     collection =  database["collections"].find_one_and_update({"_id" :s},{"$push":{"images":image}})
+    
+     return jsonify({"status":True})
+
+
+
+    except Exception as e:
+        print("eeeeeeeeeeeeeee")
+        print(e)
 
 @app.route('/carpets')
 def carpets():
@@ -217,10 +307,6 @@ def carpets():
     return jsonify({"carpets":all_documents})
 
 
-
-
-
-
 @app.route('/main_carpet/<path:filename>')
 def serve_image(filename):
     print('runiiiiiiiiiiiiiii')
@@ -231,15 +317,16 @@ def serve_image(filename):
 # Using the below, the popup message appears when the button is clicked on the webpage.
 @app.route('/add_carpet', methods=['POST'])
 def add_carpet():
-        data = request.get_json()
-        filename = data.get('filename')
+        data = request._get_file_stream()
+        print(data)
+        # filename = data.get('filename')
         # if 'file' not in request.files:
         #  return jsonify({"success": False, "msg": "No file part"})
    
         # zip_file = request.files['zipFile']
         # print(zip_file)
 
-        # files = request.files.getlist('files')
+        # files = request.files
 
         # print(files)
         
@@ -251,9 +338,9 @@ def add_carpet():
         # f.save(file_path)
         # print(file_path)
         # st.add_images_to_index(new_image_paths=[filename])
-        database["collection"].insert_one({"name": filename})
+        # database["collection"].insert_one({"name": filename})
         # database[collection_name].insert_one({"name": f.filename})
-        st.run_index(True)
+        # st.run_index(True)
         # folder_path = './main_carpet'  # Destination folder
         # file_path = os.path.normpath(os.path.join(folder_path, 'folder.zip'))
         # zip_file.save(file_path)
@@ -316,17 +403,22 @@ def login():
 @app.route('/test', methods=['POST'])
 def test():
 
+
+    data=request.get_json()
+    st = Search_Setup(image_list=image_list, file_path='vgg19', pretrained=True, image_count=107)
+    user_detail = database['users'].aggregate([{   "$match": { "email":data["email"] }     }  ])
+    collection_name = data["collection_name"]
+    email = user_detail['email']
+    file_path = f"{email}/{collection_name}"
+    folder_path = './uploads/'  # Destination folder
     if request.method == 'POST':   
         f = request.files['file'] 
-        folder_path = './uploads/'  # Destination folder
-        file_path = os.path.join(folder_path, f.filename)
-        # f.save(file_path)   
+        file_path = os.path.join(folder_path, f.name)
+        f.save(file_path)   
         # return render_template("Acknowledgement.html", name = f.filename)   
 
     message = 'You have just run a Python script on the button press!'
-    names = st.get_similar_images(image_path=f, number_of_images=10)
-    # print(names[1])
-    # names = names[0]
+    names = st.get_similar_images(image_path=file_path, number_of_images=10)
     print(names)
     names_str = {str(key): value for key, value in names.items()}
 

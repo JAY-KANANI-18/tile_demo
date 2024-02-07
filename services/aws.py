@@ -1,3 +1,4 @@
+import io
 import boto3
 from botocore.exceptions import NoCredentialsError
 from botocore.client import Config
@@ -8,8 +9,29 @@ class AWSS3Service:
 
     def list_buckets(self):
         try:
-            response = self.s3.list_buckets()
+            response = self.s3.list_buckets() 
+            print(response)
             return [bucket['Name'] for bucket in response['Buckets']]
+        except NoCredentialsError:
+            print("Credentials not available")
+    def generate_presigned_url(self, bucket_name, object_key, expiration_time=3600):
+        try:
+            url = self.s3.generate_presigned_url(
+                'put_object',
+                Params={'Bucket': bucket_name, 'Key': object_key},
+                ExpiresIn=expiration_time
+            )
+            return url
+        except NoCredentialsError:
+            print("Credentials not available")
+    def generate_get_presigned_url(self, bucket_name, object_key, expiration_time=3600):
+        try:
+            url = self.s3.generate_presigned_url(
+                'get_object',
+                Params={'Bucket': bucket_name, 'Key': object_key},
+                ExpiresIn=expiration_time
+            )
+            return url
         except NoCredentialsError:
             print("Credentials not available")
 
@@ -54,16 +76,14 @@ class AWSS3Service:
             print(f"Bucket '{bucket_name}' deleted successfully.")
         except NoCredentialsError:
             print("Credentials not available")
-    def generate_presigned_url(self, bucket_name, object_key, expiration_time=3600):
-        try:
-            url = self.s3.generate_presigned_url(
-                'put_object',
-                Params={'Bucket': bucket_name, 'Key': object_key},
-                ExpiresIn=expiration_time
-            )
-            return url
-        except NoCredentialsError:
-            print("Credentials not available")
+    
+    def read_file_from_s3(self,file_path):
+     buffer = io.BytesIO()
+     local_file_name = 'test/file.idx'
+
+     response = self.s3.download_file("designfinder", file_path,local_file_name)
+    #  file_content = response['Body'].read()
+     return local_file_name
 
 # Example Usage:
 # aws_access_key_id = 'your_access_key'

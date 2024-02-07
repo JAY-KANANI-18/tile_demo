@@ -14,8 +14,19 @@ import math
 import faiss
 # from sklearn.metrics.pairwise import cosine_similarity
 import ast
+import io 
+import tempfile
+import mmap
 
 
+from services.aws import AWSS3Service
+
+aws_access_key_id = 'AKIA36AHESWZI7QE4N7H'
+aws_secret_access_key = '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'
+# aws_secret_access_key = 'GUj2rOeT0wDmIsbWfgTAYe0nW5kOZGSfabP7QVh9'
+s3_service = AWSS3Service(aws_access_key_id, aws_secret_access_key)
+z= s3_service.generate_get_presigned_url("designfinder","meta.pkl",100000)
+print(z)
 
 
 class Load_Data:
@@ -60,22 +71,22 @@ class Load_Data:
         self.images_column_name = images_column_name
         return pd.read_csv(self.csv_file_path)[self.images_column_name].to_list()
 
-class Search_Setup:
+class Search_Setup :
     """ A class for setting up and running image similarity search."""
-    def __init__(self, image_list: list, model_name='vgg19', pretrained=True, image_count: int = None):
+    def __init__(self, image_list: list, file_path='vgg19' , pretrained=True, image_count: int = None):
         """
         Parameters:
         -----------
         image_list : list
         A list of images to be indexed and searched.
-        model_name : str, optional (default='vgg19')
+        file_path : str, optional (default='vgg19')
         The name of the pre-trained model to use for feature extraction.
         pretrained : bool, optional (default=True)
         Whether to use the pre-trained weights for the chosen model.
         image_count : int, optional (default=None)
         The number of images to be indexed and searched. If None, all images in the image_list will be used.
         """
-        self.model_name = model_name
+        self.file_path = file_path
         self.pretrained = pretrained
         self.image_data = pd.DataFrame()
         self.d = None
@@ -85,21 +96,20 @@ class Search_Setup:
         else:
             self.image_list = image_list[:image_count]
 
-        if f'metadata-files/{self.model_name}' not in os.listdir():
+        if f'metadata-files/{self.file_path}' not in os.listdir():
             try:
-                os.makedirs(f'metadata-files/{self.model_name}')
+                os.makedirs(f'metadata-files/{self.file_path}')
             except Exception as e:
                 pass
-                #print(f'\033[91m file already exists: metadata-files/{self.model_name}')
+                #print(f'\033[91m file already exists: metadata-files/{self.file_path}')
 
         # Load the pre-trained model and remove the last layer
         print("\033[91m Please Wait Model Is Loading or Downloading From Server!")
-        base_model = timm.create_model(self.model_name, pretrained=self.pretrained)
+        base_model = timm.create_model(model_name="vgg19", pretrained=self.pretrained)
         self.model = torch.nn.Sequential(*list(base_model.children())[:-1])
 
         self.model.eval()
-        print(self.model.eval())
-        print(f"\033[92m Model Loaded Successfully: {model_name}")
+        print(f"\033[92m Model Loaded Successfully: {file_path}")
 
     def _extract(self, img):
         # Resize and convert the image
@@ -139,8 +149,8 @@ class Search_Setup:
         f_data = self._get_feature(self.image_list)
         image_data['features'] = f_data
         image_data = image_data.dropna().reset_index(drop=True)
-        image_data.to_pickle(config.image_data_with_features_pkl(self.model_name))
-        print(f"\033[94m Image Meta Information Saved: [metadata-files/{self.model_name}/image_data_features.pkl]")
+        image_data.to_pickle(config.image_data_with_features_pkl(self.file_path))
+        print(f"\033[94m Image Meta Information Saved: [metadata-files/{self.file_path}/image_data_features.pkl]")
         return image_data
 
     def _start_indexing(self, image_data):
@@ -150,15 +160,15 @@ class Search_Setup:
         index = faiss.IndexFlatL2(d)
         features_matrix = np.vstack(image_data['features'].values).astype(np.float32)
         index.add(features_matrix)  # Add the features matrix to the index
-        faiss.write_index(index, config.image_features_vectors_idx(self.model_name))
-        print(config.image_features_vectors_idx(self.model_name))
-        print("\033[94m Saved The Indexed File:" + f"[metadata-files/{self.model_name}/image_features_vectors.idx]")
+        faiss.write_index(index, config.image_features_vectors_idx(self.file_path))
+        print(config.image_features_vectors_idx(self.file_path))
+        print("\033[94m Saved The Indexed File:" + f"[metadata-files/{self.file_path}/image_features_vectors.idx]")
 
     def run_index(self,y):
         """
         Indexes the images in the image_list and creates an index file for fast similarity search.
         """
-        if len(os.listdir(f'metadata-files/{self.model_name}')) == 0:
+        if len(os.listdir(f'metadata-files/{self.file_path}')) == 0:
             data = self._start_feature_extraction()
             self._start_indexing(data)
         else:
@@ -170,8 +180,8 @@ class Search_Setup:
                  self._start_indexing(data)
             else:
                 print("\033[93m Meta data already Present, Please Apply Search!")
-                print(os.listdir(f'metadata-files/{self.model_name}'))
-        self.image_data = pd.read_pickle(config.image_data_with_features_pkl(self.model_name))
+                print(os.listdir(f'metadata-files/{self.file_path}'))
+        self.image_data = pd.read_pickle(config.image_data_with_features_pkl(self.file_path))
         self.f = len(self.image_data['features'][0])
 
     def add_images_to_index(self, new_image_paths: list):
@@ -184,8 +194,8 @@ class Search_Setup:
             A list of paths to the new images to be added to the index.
         """
         # Load existing metadata and index
-        self.image_data = pd.read_pickle(config.image_data_with_features_pkl(self.model_name))
-        index = faiss.read_index(config.image_features_vectors_idx(self.model_name))
+        self.image_data = pd.read_pickle(config.image_data_with_features_pkl(self.file_path))
+        index = faiss.read_index(config.image_features_vectors_idx(self.file_path))
 
         for new_image_path in tqdm(new_image_paths):
             # Extract features from the new image
@@ -199,21 +209,45 @@ class Search_Setup:
             # Add the new image to the metadata
             new_metadata = pd.DataFrame({"images_paths": [new_image_path], "features": [feature]})
             #self.image_data = self.image_data.append(new_metadata, ignore_index=True)
-            self.image_data  =pd.concat([self.image_data, new_metadata], axis=0, ignore_index=True)
+            self.image_data  = pd.concat([self.image_data, new_metadata], axis=0, ignore_index=True)
 
             # Add the new image to the index
             index.add(np.array([feature], dtype=np.float32))
 
         # Save the updated metadata and index
-        self.image_data.to_pickle(config.image_data_with_features_pkl(self.model_name))
-        faiss.write_index(index, config.image_features_vectors_idx(self.model_name))
+        self.image_data.to_pickle(config.image_data_with_features_pkl(self.file_path))
+        faiss.write_index(index, config.image_features_vectors_idx(self.file_path))
 
         print(f"\033[92m New images added to the index: {len(new_image_paths)}")
 
     def _search_by_vector(self, v, n: int):
         self.v = v
         self.n = n
-        index = faiss.read_index(config.image_features_vectors_idx(self.model_name))
+
+        idx_content=config.image_features_vectors_idx(self.file_path)
+        # temp_file = tempfile.NamedTemporaryFile(delete=False)
+    
+        # try:
+        #     # Write the content of the BytesIO object to the temporary file
+        #     temp_file.write(idx_content)
+        #     temp_file.flush()
+            
+        #     # Close the temporary file before reading the index
+        #     temp_file.close()
+            
+        #     # Read the index from the temporary file
+        #     index = faiss.read_index(temp_file.name)
+            
+        #     print(index)
+        # finally:
+        #     # Clean up: Delete the temporary file
+        #     temp_file.close()
+        #     temp_file.unlink()
+      
+        index = faiss.read_index(idx_content)
+        self.image_data = pd.read_pickle(config.image_data_with_features_pkl(self.file_path))
+ 
+
         D, I = index.search(np.array([self.v], dtype=np.float32), self.n)
         return dict(zip(I[0], self.image_data.iloc[I[0]]['images_paths'].to_list()))
 
@@ -276,13 +310,13 @@ class Search_Setup:
                 img_vector = self._get_query_vector(img_path)
 
             # Calculate cosine similarity
-                similarity = cosine_similarity([query_vector], [img_vector])[0][0]
-                similarity_percentages.append(similarity)
+                # similarity = cosine_similarity([query_vector], [img_vector])[0][0]
+                # similarity_percentages.append(similarity)
             except Exception as e:
                 print(f"\033[91m Error calculating similarity for image {img_path}: {e}")
-                similarity_percentages.append(None)
+                # similarity_percentages.append(None)
 
-        return img_dict, similarity_percentages
+        return img_dict #,  similarity_percentages
 
 
 
@@ -364,7 +398,7 @@ class Search_Setup:
         DataFrame
             The Panda DataFrame of the metadata file.
         """
-        self.image_data = pd.read_pickle(config.image_data_with_features_pkl(self.model_name))
+        self.image_data = pd.read_pickle(config.image_data_with_features_pkl(self.file_path))
         return self.image_data
 
 
@@ -454,20 +488,20 @@ class Search_Setup:
 
 # class Search_Setup:
 #   """ A class for setting up and running image similarity search."""
-#   def _init_(self, image_list: list, model_name='vgg19', pretrained=True, image_count: int = None):
+#   def _init_(self, image_list: list, file_path='vgg19', pretrained=True, image_count: int = None):
 #       """
 #       Parameters:
 #       -----------
 #       image_list : list
 #       A list of images to be indexed and searched.
-#       model_name : str, optional (default='vgg19')
+#       file_path : str, optional (default='vgg19')
 #       The name of the pre-trained model to use for feature extraction.
 #       pretrained : bool, optional (default=True)
 #       Whether to use the pre-trained weights for the chosen model.
 #       image_count : int, optional (default=None)
 #       The number of images to be indexed and searched. If None, all images in the image_list will be used.
 #       """
-#       self.model_name = model_name
+#       self.file_path = file_path
 #       self.pretrained = pretrained
 #       self.image_data = pd.DataFrame()
 #       self.d = None
@@ -475,16 +509,16 @@ class Search_Setup:
 #           self.image_list = image_list
 #       else:
 #           self.image_list = image_list[:image_count
-#       if f'metadata-files/{self.model_name}' not in os.listdir():
+#       if f'metadata-files/{self.file_path}' not in os.listdir():
 #           try:
-#               os.makedirs(f'metadata-files/{self.model_name}')
+#               os.makedirs(f'metadata-files/{self.file_path}')
 #           except Exception as e:
 #               pass
-#               #print(f'\033[91m file already exists: metadata-files/{self.model_name}'
+#               #print(f'\033[91m file already exists: metadata-files/{self.file_path}'
 #       # Load the pre-trained model and remove the last layer
 #       print("\033[91m Please Wait Model Is Loading or Downloading From Server!")
-#       base_model = timm.create_model(self.model_name, pretrained=self.pretrained)
+#       base_model = timm.create_model(self.file_path, pretrained=self.pretrained)
 #       self.model = torch.nn.Sequential(*list(base_model.children())[:-1])
 #       self.model.eval()
-#       print(f"\033[92m Model Loaded Successfully: {model_name}"
+#       print(f"\033[92m Model Loaded Successfully: {file_path}"
 #   def _extract(self, img)
