@@ -195,14 +195,15 @@ class Search_Setup :
             A list of paths to the new images to be added to the index.
         """
         # Load existing metadata and index
+        print("file path : ",file_path)
         self.image_data = pd.read_pickle(config.image_data_with_features_pkl(file_path))
         index = faiss.read_index(config.image_features_vectors_idx(file_path))
 
         for new_image_path in tqdm(new_image_paths):
             # Extract features from the new image
             try:
-                new_image_path = f"test/{new_image_path}"
-                img = Image.open(new_image_path)
+                new_image_path1 = f"test/{new_image_path}"
+                img = Image.open(new_image_path1)
                 feature = self._extract(img)
             except Exception as e:
                 print(f"\033[91m Error extracting features from the new image: {e}")
@@ -217,16 +218,16 @@ class Search_Setup :
             index.add(np.array([feature], dtype=np.float32))
 
         # Save the updated metadata and index
-        self.image_data.to_pickle((f'{file_path}.pkl'))
-        faiss.write_index(index, (f'{file_path}.idx'))
+        self.image_data.to_pickle((f'test/{file_path}.pkl'))
+        faiss.write_index(index, (f'test/{file_path}.idx'))
 
         # print(f"\033[92m New images added to the index: {len(new_image_paths)}")
 
-    def _search_by_vector(self, v, n: int):
+    def _search_by_vector(self, v, n: int,file_path="file"):
         self.v = v
         self.n = n
 
-        idx_content=config.image_features_vectors_idx(self.file_path)
+        idx_content=config.image_features_vectors_idx(file_path)
         # temp_file = tempfile.NamedTemporaryFile(delete=False)
     
         # try:
@@ -247,7 +248,7 @@ class Search_Setup :
         #     temp_file.unlink()
       
         index = faiss.read_index(idx_content)
-        self.image_data = pd.read_pickle(config.image_data_with_features_pkl(self.file_path))
+        self.image_data = pd.read_pickle(config.image_data_with_features_pkl(file_path))
  
 
         D, I = index.search(np.array([self.v], dtype=np.float32), self.n)
@@ -294,36 +295,34 @@ class Search_Setup :
         fig.subplots_adjust(top=0.93)
         fig.suptitle('Similar Result Found', fontsize=22)
         plt.show(fig)
-    def get_similar_images(self, image_path: str, number_of_images: int = 10):
-        self.image_path = image_path
-        self.number_of_images = number_of_images
+    # def get_similar_images(self, image_path: str, number_of_images: int = 10):
+    #     self.image_path = image_path
+    #     self.number_of_images = number_of_images
 
-    # Extract features for the query image
-        query_vector = self._get_query_vector(self.image_path)
+    # # Extract features for the query image
+    #     query_vector = self._get_query_vector(self.image_path)
 
-    # Search for similar images
-        img_dict = self._search_by_vector(query_vector, self.number_of_images)
+    # # Search for similar images
+    #     img_dict = self._search_by_vector(query_vector, self.number_of_images)
 
-    # Calculate cosine similarity for each result
-        similarity_percentages = []
-        for img_path in img_dict.values():
-            try:
-            # Extract features for the result image
-                img_vector = self._get_query_vector(img_path)
+    # # Calculate cosine similarity for each result
+    #     similarity_percentages = []
+    #     for img_path in img_dict.values():
+    #         try:
+    #         # Extract features for the result image
+    #             img_vector = self._get_query_vector(img_path)
 
-            # Calculate cosine similarity
-                # similarity = cosine_similarity([query_vector], [img_vector])[0][0]
-                # similarity_percentages.append(similarity)
-            except Exception as e:
-                print(f"\033[91m Error calculating similarity for image {img_path}: {e}")
-                # similarity_percentages.append(None)
+    #         # Calculate cosine similarity
+    #             # similarity = cosine_similarity([query_vector], [img_vector])[0][0]
+    #             # similarity_percentages.append(similarity)
+    #         except Exception as e:
+    #             print(f"\033[91m Error calculating similarity for image {img_path}: {e}")
+    #             # similarity_percentages.append(None)
 
-        return img_dict #,  similarity_percentages
+    #     return img_dict #,  similarity_percentages
 
 
-
-    
-    def get_similar_images(self, image_path: str, number_of_images: int = 10):
+    def get_similar_images(self, image_path: str, number_of_images: int = 10 ,file_path:str="file"):
         """
         Returns the most similar images to a given query image according to the indexed image features.
 
@@ -337,14 +336,18 @@ class Search_Setup :
         self.image_path = image_path
         self.number_of_images = number_of_images
         query_vector = self._get_query_vector(self.image_path)
-        img_dict = self._search_by_vector(query_vector, self.number_of_images)
+        img_dict = self._search_by_vector(query_vector, self.number_of_images,file_path)
         print(img_dict.items())
         for img_path, img_vector in img_dict.items():
-            img_vector1 = self._get_query_vector(img_vector)
+            if "main_carpet" in img_vector:
+             continue  # Skip this iteration
+            print("image vector" ,img_vector)
+            print("file_path" ,s3_service.read_file_from_s3(f"{file_path}/{img_vector}"))
+            img_vector1 = self._get_query_vector(s3_service.read_file_from_s3(f"{file_path}/{img_vector}"))
             similarity_percentage = self.calculate_similarity_percentage(query_vector, img_vector1)
-            # img_vector = os.path.basename(img_vector)
+            img_vector = os.path.basename(img_vector)
 
-            img_dict[img_path] = {'image': img_vector, 'similarity_percentage': similarity_percentage}
+            img_dict[img_path] = {'image': img_vector, 'similarity_percentage': similarity_percentage or ""}
 
         return img_dict
     

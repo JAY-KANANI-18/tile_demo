@@ -367,13 +367,13 @@ def add_carpet():
         for each in array:
             print(each)
             database["collections"].find_one_and_update({"_id": ObjectId(data["collection_id"])},{"$push":{"images":each}})
-            file = s3_service.read_file_from_s3(f"jay/collectio1/{each}",local_path=each)
+            file = s3_service.read_file_from_s3(f"{user_id}/{each}",local_path=each)
             # print(file)
 
            
         file = st1.add_images_to_index(array,user_id)
-        s3_service.upload_file(file_path=f'test/{user_id}.pkl',bucket_name="designfinder",object_key=f"jay/meta/image_data_features1.pkl")
-        s3_service.upload_file(file_path=f'test/{user_id}.idx',bucket_name="designfinder",object_key=f"jay/meta/image_features_vectors2.idx")
+        s3_service.upload_file(file_path=f'test/{user_id}.pkl',bucket_name="designfinder",object_key=f"{user_id}/meta/image_data_features.pkl")
+        s3_service.upload_file(file_path=f'test/{user_id}.idx',bucket_name="designfinder",object_key=f"{user_id}/meta/image_features_vectors.idx")
         remove_files(f"test/{user_id}.pkl")
         remove_files(f"test/{user_id}.idx")
         for each in array:
@@ -406,32 +406,37 @@ def serve_image(filename):
 
 @app.route('/test', methods=['POST'])
 def test():
+ try:
 
 
-    data=request.get_json()
-    st = Search_Setup(image_list=image_list, file_path='vgg19', pretrained=True, image_count=107)
-    user_detail = database['users'].aggregate([{   "$match": { "email":data["email"] }     }  ])
-    collection_name = data["collection_name"]
-    email = user_detail['email']
-    file_path = f"{email}/{collection_name}"
-    folder_path = './uploads/'  # Destination folder
+    data = request.form
+    user_id = request.form['user_id']
+
+    print("user_id",user_id)
+    file_path = data["user_id"]
+    # print(file_path)
+    folder_path = 'uploads/'  # Destination folder
     if request.method == 'POST':   
         f = request.files['file'] 
-        file_path = os.path.join(folder_path, f.name)
+        print(f)
+        file_path = os.path.join(folder_path, f.filename)
         f.save(file_path)   
         # return render_template("Acknowledgement.html", name = f.filename)   
 
-    message = 'You have just run a Python script on the button press!'
-    names = st.get_similar_images(image_path=file_path, number_of_images=10)
-    print(names)
+    # message = 'You have just run a Python script on the button press!'
+
+    st1 = Search_Setup(image_list=image_list, file_path='vgg19', pretrained=True, image_count=10)
+    names = st1.get_similar_images(image_path=file_path, number_of_images=10,file_path=data["user_id"])
     names_str = {str(key): value for key, value in names.items()}
 
-    print(names_str)
+    # print(names_str)
 
-    # st.plot_similar_images(image_path = image_list[90],number_of_images=16)
+    # # st.plot_similar_images(image_path = image_list[90],number_of_images=16)
 
     return jsonify(names_str)
-
+ except Exception as e:
+     print(str(e))
+     return jsonify({"status":False,"error":str(e)})
 
 if __name__ == "__main__":
     app.run(debug=True,host='0.0.0.0',port=8000)
