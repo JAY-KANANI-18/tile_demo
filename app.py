@@ -113,7 +113,6 @@ image_names = [filename for filename in os.listdir(image_directory) if filename.
 
 app = Flask(__name__)
 CORS(app,  resources={r"/*": {"origins": "*"}})
-app.config['MAX_CONTENT_LENGTH'] = 1024
 
 image_list = Load_Data().from_folder(['./main_carpet'])
 st = Search_Setup(image_list=image_list, file_path='vgg19', pretrained=True, image_count=1)
